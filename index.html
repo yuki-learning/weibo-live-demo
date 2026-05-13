@@ -3,273 +3,346 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>直播间推荐词条 — 原型预览</title>
+  <title>微博直播间 — 推荐词条原型预览</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{
-      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",Arial,sans-serif;
-      background:linear-gradient(135deg,#0f0c1a 0%,#1a0f2e 50%,#0c1a1a 100%);
-      min-height:100vh;color:#fff;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+      background: #060608;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      color: #fff;
+      overflow-x: hidden;
     }
 
-    /* 手机外框 */
-    .phone-frame{
-      width:375px;height:812px;
-      background:#111;
-      border-radius:52px;
+    /* 背景光效 */
+    .scene-bg {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+    }
+    .scene-bg::before {
+      content: '';
+      position: absolute;
+      width: 800px; height: 800px;
+      background: radial-gradient(ellipse at center, rgba(255,102,0,.12) 0%, transparent 65%);
+      top: -200px; left: -200px;
+      animation: driftA 18s ease-in-out infinite alternate;
+    }
+    .scene-bg::after {
+      content: '';
+      position: absolute;
+      width: 600px; height: 600px;
+      background: radial-gradient(ellipse at center, rgba(180,30,80,.1) 0%, transparent 65%);
+      bottom: -100px; right: 0;
+      animation: driftB 14s ease-in-out infinite alternate;
+    }
+    @keyframes driftA { from{transform:translate(0,0)} to{transform:translate(60px,40px)} }
+    @keyframes driftB { from{transform:translate(0,0)} to{transform:translate(-50px,-30px)} }
+
+    /* iPhone 16 Pro 外框 */
+    .iphone {
+      position: relative;
+      width: 393px;
+      height: 852px;
+      background: linear-gradient(160deg, #303030 0%, #1c1c1c 40%, #111 100%);
+      border-radius: 56px;
       box-shadow:
-        0 0 0 2px #333,
-        0 0 0 4px #222,
-        0 40px 80px rgba(0,0,0,.7),
-        0 0 60px rgba(255,107,138,.08);
-      position:relative;overflow:hidden;flex-shrink:0;
+        0 0 0 1.5px rgba(255,255,255,.12),
+        0 0 0 3px rgba(0,0,0,.8),
+        0 0 0 4px rgba(255,255,255,.04),
+        0 50px 120px rgba(0,0,0,.9),
+        0 20px 50px rgba(0,0,0,.6),
+        inset 0 1px 0 rgba(255,255,255,.18),
+        inset 0 -1px 0 rgba(0,0,0,.5);
+      flex-shrink: 0;
+      animation: float 5s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%,100% { transform: translateY(0) rotate3d(0,1,0,0deg); }
+      50% { transform: translateY(-10px) rotate3d(0,1,0,.5deg); }
     }
 
-    /* 灵动岛 */
-    .dynamic-island{
-      position:absolute;top:12px;left:50%;transform:translateX(-50%);
-      width:120px;height:34px;background:#000;border-radius:20px;z-index:100;
-      display:flex;align-items:center;justify-content:center;gap:8px;
+    /* 屏幕区域 */
+    .iphone-screen {
+      position: absolute;
+      inset: 6px;
+      border-radius: 50px;
+      overflow: hidden;
+      background: #000;
+      box-shadow: inset 0 0 20px rgba(0,0,0,.5);
+    }
+    .iphone-screen iframe {
+      width: 100%; height: 100%; border: none; display: block;
     }
 
-    /* 状态栏 */
-    .status-bar{
-      position:absolute;top:0;left:0;right:0;height:50px;z-index:99;
-      display:flex;align-items:flex-end;justify-content:space-between;
-      padding:0 24px 6px;font-size:13px;font-weight:600;color:#fff;
-      pointer-events:none;
+    /* 灵动岛覆盖层（装饰） */
+    .di-overlay {
+      position: absolute;
+      top: 18px; left: 50%; transform: translateX(-50%);
+      width: 130px; height: 38px;
+      background: #000;
+      border-radius: 22px;
+      z-index: 20;
+      pointer-events: none;
+      display: flex; align-items: center; justify-content: center; gap: 16px;
+    }
+    .di-camera {
+      width: 12px; height: 12px; background: #111; border-radius: 50%;
+      box-shadow: inset 0 0 4px rgba(60,180,255,.25), 0 0 0 1px rgba(255,255,255,.04);
+    }
+    .di-notch { width: 52px; height: 7px; background: #0a0a0a; border-radius: 4px; }
+
+    /* 侧边实体按键 */
+    .sb { position: absolute; background: linear-gradient(to right,#282828,#1e1e1e); }
+    .sb-power { right: -3px; top: 210px; width: 3px; height: 88px; border-radius: 0 2px 2px 0; }
+    .sb-mute  { left: -3px; top: 130px; width: 3px; height: 36px; border-radius: 2px 0 0 2px; }
+    .sb-volu  { left: -3px; top: 182px; width: 3px; height: 60px; border-radius: 2px 0 0 2px; }
+    .sb-vold  { left: -3px; top: 252px; width: 3px; height: 60px; border-radius: 2px 0 0 2px; }
+
+    /* 信息面板区 */
+    .sidebar { width: 280px; margin-left: 52px; flex-shrink: 0; }
+
+    .card {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 20px;
+      padding: 18px 20px;
+      margin-bottom: 14px;
+      backdrop-filter: blur(20px);
+    }
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.35);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
-    /* iframe 容器 */
-    .phone-screen{
-      position:absolute;inset:0;border-radius:52px;overflow:hidden;
+    /* 流程步骤 */
+    .flow-step {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,.05);
     }
-    .phone-screen iframe{
-      width:100%;height:100%;border:none;
-    }
-
-    /* 侧面按钮 */
-    .side-btn{
-      position:absolute;width:4px;border-radius:2px;background:#2a2a2a;
-    }
-
-    /* 信息卡 */
-    .info-card{
-      background:rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.1);
-      border-radius:16px;padding:20px;
+    .flow-step:last-child { border-bottom: none; padding-bottom: 0; }
+    .step-badge {
+      width: 24px; height: 24px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800;
+      flex-shrink: 0;
     }
 
-    /* 功能标签 */
-    .feature-tag{
-      display:inline-flex;align-items:center;gap:6px;
-      padding:6px 12px;border-radius:20px;font-size:12px;
-      border:1px solid rgba(255,255,255,.15);
+    /* 指引 item */
+    .guide-item {
+      display: flex; align-items: center; gap: 10px; padding: 7px 0;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+    }
+    .guide-item:last-child { border-bottom: none; }
+    .guide-icon {
+      width: 28px; height: 28px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
     }
 
-    /* 交互说明步骤 */
-    .step{
-      display:flex;gap:12px;align-items:flex-start;padding:10px 0;
-      border-bottom:1px solid rgba(255,255,255,.07);
-    }
-    .step:last-child{border-bottom:none;}
-    .step-num{
-      width:24px;height:24px;border-radius:50%;flex-shrink:0;
-      display:flex;align-items:center;justify-content:center;
-      font-size:12px;font-weight:700;
+    /* 标签 */
+    .chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 20px; font-size: 11px;
+      font-weight: 600; white-space: nowrap;
     }
 
-    /* 渐变标题 */
-    .grad-text{
-      background:linear-gradient(90deg,#ff6b8a,#ff9a6c,#ffd166);
-      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-    }
+    /* 状态点 */
+    .live-dot { display:inline-block;width:6px;height:6px;background:#ff3b30;border-radius:50%;animation:blink 1.2s infinite; }
+    @keyframes blink { 0%,100%{opacity:1}50%{opacity:.2} }
 
-    @keyframes float{
-      0%,100%{transform:translateY(0)}
-      50%{transform:translateY(-8px)}
+    /* 重置按钮 */
+    .reset-btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 22px; padding: 9px 22px;
+      font-size: 13px; color: rgba(255,255,255,.65);
+      cursor: pointer; transition: all .2s;
     }
-    .phone-wrap{ animation:float 4s ease-in-out infinite; }
+    .reset-btn:hover { background: rgba(255,255,255,.1); color: #fff; }
   </style>
 </head>
 <body>
+<div class="scene-bg"></div>
 
-<div style="min-height:100vh;display:flex;flex-direction:column;">
+<!-- 顶部 Header -->
+<header style="position:relative;z-index:10;width:100%;max-width:900px;padding:32px 24px 20px;display:flex;align-items:center;justify-content:space-between;">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div style="width:36px;height:36px;background:linear-gradient(135deg,#ff6600,#e83060);border-radius:10px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(255,102,0,.35);">
+      <i class="fa fa-podcast" style="color:#fff;font-size:15px;"></i>
+    </div>
+    <div>
+      <div style="font-size:16px;font-weight:700;color:#fff;letter-spacing:.2px;">微博直播间</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.3);margin-top:1px;">推荐词条功能 · 高保真原型 v1.0</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <div class="chip" style="background:rgba(255,60,60,.12);border:1px solid rgba(255,60,60,.2);color:#ff7070;">
+      <span class="live-dot"></span> LIVE
+    </div>
+    <div class="chip" style="background:rgba(255,102,0,.12);border:1px solid rgba(255,102,0,.2);color:#ff8833;">
+      <i class="fa fa-mobile-screen" style="font-size:10px;"></i> 移动端原型
+    </div>
+  </div>
+</header>
 
-  <!-- 顶部 Header -->
-  <header style="padding:32px 48px 24px;border-bottom:1px solid rgba(255,255,255,.07);">
-    <div style="display:flex;align-items:center;justify-content:space-between;max-width:1100px;margin:0 auto;">
+<!-- 主体内容 -->
+<main style="position:relative;z-index:10;width:100%;max-width:900px;padding:0 24px 60px;display:flex;align-items:flex-start;justify-content:center;gap:0;">
+
+  <!-- 左：iPhone 手机壳 -->
+  <div style="display:flex;flex-direction:column;align-items:center;gap:20px;flex-shrink:0;">
+    <div class="iphone">
+      <div class="sb sb-power"></div>
+      <div class="sb sb-mute"></div>
+      <div class="sb sb-volu"></div>
+      <div class="sb sb-vold"></div>
+      <div class="iphone-screen">
+        <div class="di-overlay">
+          <div class="di-camera"></div>
+          <div class="di-notch"></div>
+        </div>
+        <iframe src="pages/live_room.html" title="直播间原型"></iframe>
+      </div>
+    </div>
+    <button class="reset-btn" onclick="document.querySelector('iframe').src='pages/live_room.html'+'?t='+Date.now()">
+      <i class="fa fa-rotate-right" style="font-size:11px;"></i> 重置演示
+    </button>
+  </div>
+
+  <!-- 右：说明面板 -->
+  <div class="sidebar">
+
+    <!-- 交互流程 -->
+    <div class="card">
+      <div class="card-title">
+        <i class="fa fa-arrow-right-arrow-left" style="color:#ff8533;"></i> 核心交互流程
+      </div>
+
+      <div class="flow-step">
+        <div class="step-badge" style="background:rgba(255,102,0,.18);color:#ff8533;">A</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:3px;">气泡引导（首次进入）</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.4);line-height:1.6;">输入框上方出现 3 个推荐词条，8 秒无操作后自动消失并切换</div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-badge" style="background:rgba(30,120,255,.18);color:#70a8ff;">D</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:3px;">Placeholder 轮播（激活后）</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.4);line-height:1.6;">输入框 placeholder 每 3 秒切换词条；点击输入框时自动填入当前词条</div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-badge" style="background:rgba(34,197,94,.15);color:#4ade80;">⊕</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:3px;">词条面板（弹出态）</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.4);line-height:1.6;">分类 Tab 筛选，点击词条填入输入框，AI / 粉丝专属标签可见</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 操作指引 -->
+    <div class="card">
+      <div class="card-title">
+        <i class="fa fa-hand-pointer" style="color:#ff8533;"></i> 操作指引
+      </div>
       <div>
-        <div style="font-size:11px;letter-spacing:.12em;color:rgba(255,255,255,.4);text-transform:uppercase;margin-bottom:6px;">
-          <i class="fa fa-broadcast-tower" style="margin-right:6px;color:#ff6b8a;"></i>直播间产品原型
+        <div class="guide-item">
+          <div class="guide-icon" style="background:rgba(255,102,0,.12);">
+            <i class="fa fa-wand-magic-sparkles" style="color:#ff8533;font-size:11px;"></i>
+          </div>
+          <span style="font-size:12px;color:rgba(255,255,255,.6);">点击推荐词条 → 填入输入框并打开面板</span>
         </div>
-        <h1 style="font-size:26px;font-weight:700;" class="grad-text">推荐词条 — 引导用户发言</h1>
-        <p style="font-size:13px;color:rgba(255,255,255,.5);margin-top:4px;">移动端竖屏直播间 · MVP 阶段交互演示</p>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <div class="feature-tag" style="background:rgba(255,107,138,.12);color:#ffd0dc;">
-          <i class="fa fa-comment-dots" style="font-size:11px;"></i> A方案气泡引导
+        <div class="guide-item">
+          <div class="guide-icon" style="background:rgba(255,102,0,.12);">
+            <i class="fa fa-rotate-right" style="color:#ff8533;font-size:11px;"></i>
+          </div>
+          <span style="font-size:12px;color:rgba(255,255,255,.6);">点击「换一批」刷新当前词条组</span>
         </div>
-        <div class="feature-tag" style="background:rgba(80,160,255,.12);color:#c8e4ff;">
-          <i class="fa fa-sync" style="font-size:11px;"></i> D方案轮播
+        <div class="guide-item">
+          <div class="guide-icon" style="background:rgba(255,102,0,.12);">
+            <i class="fa fa-keyboard" style="color:#ff8533;font-size:11px;"></i>
+          </div>
+          <span style="font-size:12px;color:rgba(255,255,255,.6);">点击「一起聊聊」唤起输入面板</span>
         </div>
-        <div class="feature-tag" style="background:rgba(60,210,150,.12);color:#c0f0e0;">
-          <i class="fa fa-robot" style="font-size:11px;"></i> LLM词条生成
+        <div class="guide-item">
+          <div class="guide-icon" style="background:rgba(255,102,0,.12);">
+            <i class="fa fa-paper-plane" style="color:#ff8533;font-size:11px;"></i>
+          </div>
+          <span style="font-size:12px;color:rgba(255,255,255,.6);">发送弹幕后自动切换词条并滚动</span>
         </div>
       </div>
     </div>
-  </header>
 
-  <!-- 主体内容 -->
-  <main style="flex:1;padding:40px 48px;max-width:1100px;margin:0 auto;width:100%;">
-    <div style="display:flex;gap:48px;align-items:flex-start;">
-
-      <!-- 左：手机原型 -->
-      <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:20px;">
-        <div class="phone-wrap">
-          <div class="phone-frame">
-            <!-- 侧面按钮 -->
-            <div class="side-btn" style="right:-4px;top:120px;height:60px;"></div>
-            <div class="side-btn" style="left:-4px;top:100px;height:36px;"></div>
-            <div class="side-btn" style="left:-4px;top:148px;height:60px;"></div>
-            <div class="side-btn" style="left:-4px;top:220px;height:60px;"></div>
-
-            <!-- 屏幕内容 -->
-            <div class="phone-screen">
-              <!-- 灵动岛 -->
-              <div class="dynamic-island">
-                <div style="width:10px;height:10px;background:#333;border-radius:50%;"></div>
-                <div style="width:24px;height:10px;background:#1a1a1a;border-radius:5px;"></div>
-              </div>
-              <!-- 状态栏 -->
-              <div class="status-bar">
-                <span>9:41</span>
-                <div style="display:flex;align-items:center;gap:5px;">
-                  <i class="fa fa-signal" style="font-size:12px;"></i>
-                  <i class="fa fa-wifi" style="font-size:12px;"></i>
-                  <i class="fa fa-battery-three-quarters" style="font-size:12px;"></i>
-                </div>
-              </div>
-              <!-- 直播间页面 -->
-              <iframe src="pages/live_room.html" title="直播间原型"></iframe>
-            </div>
-          </div>
-        </div>
-
-        <!-- 重置按钮 -->
-        <button onclick="document.querySelector('iframe').src='pages/live_room.html'"
-          style="background:rgba(255,107,138,.18);border:1px solid rgba(255,107,138,.3);color:#ffd0dc;
-                 border-radius:20px;padding:9px 24px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;
-                 transition:background .2s;">
-          <i class="fa fa-redo" style="font-size:11px;"></i> 重置演示
-        </button>
+    <!-- 三层词条架构 -->
+    <div class="card">
+      <div class="card-title">
+        <i class="fa fa-layer-group" style="color:#ff8533;"></i> 词条三层架构
       </div>
-
-      <!-- 右：说明区 -->
-      <div style="flex:1;min-width:0;">
-
-        <!-- 核心交互流程 -->
-        <div class="info-card" style="margin-bottom:20px;">
-          <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
-            <i class="fa fa-route" style="color:#ff6b8a;font-size:13px;"></i> 核心交互流程
-          </div>
-          <div class="step">
-            <div class="step-num" style="background:rgba(255,107,138,.2);color:#ff6b8a;">1</div>
-            <div>
-              <div style="font-size:13px;font-weight:600;color:#fff;">首次进入 — A方案气泡引导</div>
-              <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:3px;">输入框上方展示3个推荐词条气泡，8秒无操作自动消失</div>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-num" style="background:rgba(80,160,255,.2);color:#60a0ff;">2</div>
-            <div>
-              <div style="font-size:13px;font-weight:600;color:#fff;">点击词条 → 填入输入框</div>
-              <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:3px;">词条填入可编辑，用户可修改后发送；发送后切换至轮播状态</div>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-num" style="background:rgba(60,210,150,.2);color:#3cd296;">3</div>
-            <div>
-              <div style="font-size:13px;font-weight:600;color:#fff;">激活后 — D方案 Placeholder 轮播</div>
-              <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:3px;">输入框 placeholder 每3秒换一条推荐词，点击自动填入</div>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-num" style="background:rgba(255,200,0,.2);color:#ffd166;">4</div>
-            <div>
-              <div style="font-size:13px;font-weight:600;color:#fff;">输入中自动暂停，发送后刷新词条</div>
-              <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:3px;">用户打字时不打断，消费词条或ASR内容变化后触发刷新</div>
-            </div>
-          </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="background:rgba(255,102,0,.08);border:1px solid rgba(255,102,0,.15);border-radius:12px;padding:10px 13px;">
+          <div style="font-size:12px;font-weight:700;color:#ff9955;margin-bottom:2px;">Layer 1 &nbsp;·&nbsp; 场次词库</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.4);">运营针对单场手动配置，优先级最高</div>
         </div>
-
-        <!-- 词条生成架构 -->
-        <div class="info-card" style="margin-bottom:20px;">
-          <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
-            <i class="fa fa-layer-group" style="color:#60a0ff;font-size:13px;"></i> 三层词条生成架构
-          </div>
-          <div style="display:flex;flex-direction:column;gap:10px;">
-            <div style="background:rgba(255,107,138,.1);border:1px solid rgba(255,107,138,.2);border-radius:12px;padding:12px 14px;">
-              <div style="font-size:12px;font-weight:700;color:#ff9ab8;margin-bottom:3px;">Layer 1 · 场次词库（最高优先级）</div>
-              <div style="font-size:12px;color:rgba(255,255,255,.5);">运营针对单场直播手动配置，如抽奖→"我要参与"</div>
-            </div>
-            <div style="background:rgba(80,160,255,.1);border:1px solid rgba(80,160,255,.2);border-radius:12px;padding:12px 14px;">
-              <div style="font-size:12px;font-weight:700;color:#80c0ff;margin-bottom:3px;">Layer 2 · 全局词库（兜底）</div>
-              <div style="font-size:12px;color:rgba(255,255,255,.5);">平台维护通用词条，如"好看""链接放哪""主播加油"</div>
-            </div>
-            <div style="background:rgba(60,210,150,.1);border:1px solid rgba(60,210,150,.2);border-radius:12px;padding:12px 14px;">
-              <div style="font-size:12px;font-weight:700;color:#60e0b0;margin-bottom:3px;">Layer 3 · LLM 动态生成（主力）</div>
-              <div style="font-size:12px;color:rgba(255,255,255,.5);">基于 ASR 文本 + 弹幕流实时生成，倾向多用 LLM</div>
-            </div>
-          </div>
+        <div style="background:rgba(58,95,199,.08);border:1px solid rgba(58,95,199,.2);border-radius:12px;padding:10px 13px;">
+          <div style="font-size:12px;font-weight:700;color:#7da8f8;margin-bottom:2px;">Layer 2 &nbsp;·&nbsp; 全局词库</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.4);">平台级通用兜底词条，运营后台增删改</div>
         </div>
-
-        <!-- 关键决策 -->
-        <div class="info-card">
-          <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
-            <i class="fa fa-check-circle" style="color:#3cd296;font-size:13px;"></i> 关键设计决策
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px 12px;">
-              <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:2px;">触发时机</div>
-              <div style="font-size:12px;color:#fff;">ASR + 弹幕流自动触发</div>
-            </div>
-            <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px 12px;">
-              <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:2px;">状态切换</div>
-              <div style="font-size:12px;color:#fff;">首次发弹幕后切换</div>
-            </div>
-            <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px 12px;">
-              <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:2px;">词条数量</div>
-              <div style="font-size:12px;color:#fff;">每次展示 3 个</div>
-            </div>
-            <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px 12px;">
-              <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:2px;">轮播间隔</div>
-              <div style="font-size:12px;color:#fff;">3秒（运营可配置）</div>
-            </div>
-            <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px 12px;">
-              <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:2px;">气泡消失</div>
-              <div style="font-size:12px;color:#fff;">8秒超时或首次发言</div>
-            </div>
-            <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px 12px;">
-              <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:2px;">个性化</div>
-              <div style="font-size:12px;color:#fff;">身份分层叠加专属词</div>
-            </div>
-          </div>
+        <div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.15);border-radius:12px;padding:10px 13px;">
+          <div style="font-size:12px;font-weight:700;color:#4ade80;margin-bottom:2px;">Layer 3 &nbsp;·&nbsp; LLM 动态生成</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.4);">ASR + 弹幕驱动，实时上下文相关词条</div>
         </div>
-
-      </div><!-- end 右侧 -->
+      </div>
     </div>
-  </main>
 
-  <!-- Footer -->
-  <footer style="padding:20px 48px;border-top:1px solid rgba(255,255,255,.07);text-align:center;">
-    <div style="font-size:12px;color:rgba(255,255,255,.25);">
-      直播间推荐词条功能 · PRD v1.0 · 2026-04-15 · 移动端 MVP 原型
+    <!-- 关键参数 -->
+    <div class="card">
+      <div class="card-title">
+        <i class="fa fa-sliders" style="color:#ff8533;"></i> 关键参数
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:10px 12px;">
+          <div style="font-size:10px;color:rgba(255,255,255,.3);margin-bottom:3px;">气泡消失</div>
+          <div style="font-size:13px;font-weight:600;color:#fff;">8 秒超时</div>
+        </div>
+        <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:10px 12px;">
+          <div style="font-size:10px;color:rgba(255,255,255,.3);margin-bottom:3px;">轮播间隔</div>
+          <div style="font-size:13px;font-weight:600;color:#fff;">3 秒</div>
+        </div>
+        <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:10px 12px;">
+          <div style="font-size:10px;color:rgba(255,255,255,.3);margin-bottom:3px;">每次展示</div>
+          <div style="font-size:13px;font-weight:600;color:#fff;">3 个词条</div>
+        </div>
+        <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:10px 12px;">
+          <div style="font-size:10px;color:rgba(255,255,255,.3);margin-bottom:3px;">词条长度</div>
+          <div style="font-size:13px;font-weight:600;color:#fff;">≤ 15 个字</div>
+        </div>
+      </div>
     </div>
-  </footer>
 
-</div>
+  </div>
+</main>
+
+<footer style="position:relative;z-index:10;padding:0 24px 24px;text-align:center;">
+  <div style="font-size:11px;color:rgba(255,255,255,.15);">
+    微博直播间 · 推荐词条功能 PRD v1.0 · 2026-04-15 · 移动端 MVP
+  </div>
+</footer>
+
 </body>
 </html>
