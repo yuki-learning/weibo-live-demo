@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>词条引导方案预览</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
+      background: #07070f; min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      gap: 60px; padding: 40px 20px;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 600px 400px at 30% 60%, rgba(249,115,22,.06) 0%, transparent 70%),
+        radial-gradient(ellipse 500px 400px at 70% 40%, rgba(139,92,246,.06) 0%, transparent 70%);
+    }
+
+    /* ── iPhone 16 外框 ── */
+    .iphone-wrap { position: relative; flex-shrink: 0; }
+    .side-l { position: absolute; left: -5px; background: linear-gradient(180deg,#2c2c2c,#1e1e1e); border-radius: 3px; }
+    .side-r { position: absolute; right: -5px; background: linear-gradient(180deg,#2c2c2c,#1e1e1e); border-radius: 3px; }
+
+    .iphone-body {
+      width: 393px;
+      background: linear-gradient(160deg, #2d2d2d 0%, #1a1a1a 50%, #2d2d2d 100%);
+      border-radius: 54px; padding: 13px;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,.1), 0 0 0 2px rgba(0,0,0,.8),
+        0 50px 100px rgba(0,0,0,.75), 0 20px 40px rgba(0,0,0,.5),
+        inset 0 1px 0 rgba(255,255,255,.15), inset 0 -1px 0 rgba(0,0,0,.3);
+    }
+
+    /* 屏幕容器：固定 aspect-ratio，相对定位供键盘叠加 */
+    .iphone-screen {
+      width: 100%;
+      aspect-ratio: 393 / 852;
+      border-radius: 44px; overflow: hidden; background: black;
+      position: relative;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+    }
+
+    /* 灵动岛 */
+    .dynamic-island {
+      position: absolute; top: 13px; left: 50%; transform: translateX(-50%);
+      width: 126px; height: 36px; background: #000; border-radius: 20px; z-index: 200;
+      display: flex; align-items: center; justify-content: space-between; padding: 0 18px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.05);
+    }
+    .island-dot { width:10px;height:10px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#1a3a5c,#0d1f33);box-shadow:inset 0 0 3px rgba(0,100,200,.4); }
+    .island-pill { width:8px;height:8px;border-radius:50%;background:#111;border:1.5px solid #1a1a1a; }
+
+    /* iframe 填满屏幕 */
+    #liveIframe {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      border: none; display: block;
+    }
+
+    /* ── 模拟键盘：绝对定位叠加在屏幕底部 ── */
+    #mockKeyboard {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      background: #1c1c1e;
+      height: 0; overflow: hidden;
+      transition: height .3s cubic-bezier(.32,.72,0,1);
+      z-index: 150;
+    }
+    #mockKeyboard.show { height: 248px; }
+
+    .kb-row { display:flex; gap:5px; padding:5px 4px 0; justify-content:center; }
+    .kb-key {
+      flex:1; max-width:34px; height:40px;
+      background:#3a3a3c; border-radius:5px; border:none;
+      color:white; font-size:15px; font-weight:400;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; transition:background .1s;
+      box-shadow: 0 1px 0 rgba(0,0,0,.5);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .kb-key:active { background:#5a5a5e; }
+    .kb-key.dark { background:#242426; font-size:11px; color:rgba(255,255,255,.85); }
+    .kb-key.wide { max-width:42px; }
+    .kb-key.space { max-width:none; flex:4; font-size:13px; color:rgba(255,255,255,.6); }
+    .kb-key.send-key { max-width:none; flex:1.4; background:linear-gradient(135deg,#f97316,#ef4444); font-size:12px; font-weight:600; color:white; }
+    .kb-bottom { display:flex; gap:5px; padding:5px 4px 8px; }
+
+    /* ── 右侧说明卡 ── */
+    .info-panel { width: 320px; flex-shrink: 0; }
+    .badge { display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.04em;padding:4px 12px;border-radius:20px;margin-bottom:14px;background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.3);color:#fb923c; }
+    h1 { font-size:22px;font-weight:700;color:white;line-height:1.3;margin-bottom:6px; }
+    .subtitle { font-size:13px;color:rgba(255,255,255,.4);margin-bottom:24px; }
+    .state-block { background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:14px 16px;margin-bottom:10px; }
+    .state-title { font-size:12px;font-weight:600;color:white;display:flex;align-items:center;gap:7px;margin-bottom:8px; }
+    .state-dot { width:7px;height:7px;border-radius:50%; }
+    .state-row { font-size:11px;color:rgba(255,255,255,.45);display:flex;align-items:flex-start;gap:7px;margin-bottom:5px;line-height:1.5; }
+    .state-row:last-child { margin-bottom:0; }
+    .state-row i { margin-top:2px;font-size:9px;flex-shrink:0; }
+    .divider { height:1px;background:rgba(255,255,255,.06);margin:18px 0; }
+    .btn-group { display:flex;gap:8px;flex-wrap:wrap; }
+    .btn { font-size:11px;font-weight:500;padding:7px 14px;border-radius:12px;border:none;cursor:pointer;transition:transform .15s;display:flex;align-items:center;gap:5px; }
+    .btn:active { transform:scale(.95); }
+    .btn-primary { background:linear-gradient(135deg,#f97316,#ef4444);color:white; }
+    .btn-secondary { background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.7); }
+    .tip { margin-top:16px;font-size:11px;color:rgba(249,115,22,.8);background:rgba(249,115,22,.07);border:1px solid rgba(249,115,22,.18);border-radius:10px;padding:8px 12px;display:flex;align-items:flex-start;gap:7px;line-height:1.5; }
+
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+    .iphone-wrap { animation: float 5s ease-in-out infinite; }
+  </style>
+</head>
+<body>
+
+  <!-- iPhone 16 外框 -->
+  <div class="iphone-wrap">
+    <div class="side-l" style="top:108px;width:4px;height:30px;border-radius:2px 0 0 2px;"></div>
+    <div class="side-l" style="top:152px;width:4px;height:58px;"></div>
+    <div class="side-l" style="top:222px;width:4px;height:58px;"></div>
+    <div class="side-r" style="top:166px;width:4px;height:80px;border-radius:0 2px 2px 0;"></div>
+
+    <div class="iphone-body">
+      <div class="iphone-screen">
+        <!-- 灵动岛 -->
+        <div class="dynamic-island">
+          <div class="island-dot"></div>
+          <div class="island-pill"></div>
+        </div>
+
+        <!-- 直播 iframe（填满屏幕） -->
+        <iframe id="liveIframe" src="pages/live_room_v2.html"></iframe>
+
+        <!-- 模拟键盘（绝对定位，叠在 iframe 底部） -->
+        <div id="mockKeyboard">
+          <div class="kb-row">
+            <button class="kb-key" onclick="kbType('q')">q</button>
+            <button class="kb-key" onclick="kbType('w')">w</button>
+            <button class="kb-key" onclick="kbType('e')">e</button>
+            <button class="kb-key" onclick="kbType('r')">r</button>
+            <button class="kb-key" onclick="kbType('t')">t</button>
+            <button class="kb-key" onclick="kbType('y')">y</button>
+            <button class="kb-key" onclick="kbType('u')">u</button>
+            <button class="kb-key" onclick="kbType('i')">i</button>
+            <button class="kb-key" onclick="kbType('o')">o</button>
+            <button class="kb-key" onclick="kbType('p')">p</button>
+          </div>
+          <div class="kb-row" style="padding-left:20px;padding-right:20px;">
+            <button class="kb-key" onclick="kbType('a')">a</button>
+            <button class="kb-key" onclick="kbType('s')">s</button>
+            <button class="kb-key" onclick="kbType('d')">d</button>
+            <button class="kb-key" onclick="kbType('f')">f</button>
+            <button class="kb-key" onclick="kbType('g')">g</button>
+            <button class="kb-key" onclick="kbType('h')">h</button>
+            <button class="kb-key" onclick="kbType('j')">j</button>
+            <button class="kb-key" onclick="kbType('k')">k</button>
+            <button class="kb-key" onclick="kbType('l')">l</button>
+          </div>
+          <div class="kb-row">
+            <button class="kb-key dark wide">⇧</button>
+            <button class="kb-key" onclick="kbType('z')">z</button>
+            <button class="kb-key" onclick="kbType('x')">x</button>
+            <button class="kb-key" onclick="kbType('c')">c</button>
+            <button class="kb-key" onclick="kbType('v')">v</button>
+            <button class="kb-key" onclick="kbType('b')">b</button>
+            <button class="kb-key" onclick="kbType('n')">n</button>
+            <button class="kb-key" onclick="kbType('m')">m</button>
+            <button class="kb-key dark wide" onclick="kbType('del')">⌫</button>
+          </div>
+          <div class="kb-bottom">
+            <button class="kb-key dark" style="max-width:44px;font-size:11px;">123</button>
+            <button class="kb-key dark" style="max-width:36px;">🌐</button>
+            <button class="kb-key space" onclick="kbType(' ')">空格</button>
+            <button class="kb-key send-key" onclick="kbSend()">发送</button>
+          </div>
+        </div>
+
+      </div><!-- /iphone-screen -->
+    </div><!-- /iphone-body -->
+  </div><!-- /iphone-wrap -->
+
+  <!-- 右侧说明卡 -->
+  <div class="info-panel">
+    <div class="badge"><i class="fas fa-layer-group"></i> 方案 A + B 融合</div>
+    <h1>评论区词条引导</h1>
+    <p class="subtitle">默认固定词条行 · 点击输入框后展开完整面板 + 键盘</p>
+
+    <div class="state-block">
+      <div class="state-title"><span class="state-dot" style="background:#fb923c;"></span>默认态（未聚焦）</div>
+      <div class="state-row"><i class="fas fa-circle" style="color:#4ade80;"></i>底部固定一行 4 个胶囊词条</div>
+      <div class="state-row"><i class="fas fa-circle" style="color:#4ade80;"></i>热度词条标注 🔥 + 使用量</div>
+      <div class="state-row"><i class="fas fa-circle" style="color:#4ade80;"></i>右侧「换一换」切换词条批次</div>
+      <div class="state-row"><i class="fas fa-circle" style="color:#4ade80;"></i>点击词条 → 直接发送，不打断直播</div>
+    </div>
+
+    <div class="state-block">
+      <div class="state-title"><span class="state-dot" style="background:#a78bfa;"></span>展开态（点击输入框）</div>
+      <div class="state-row"><i class="fas fa-circle" style="color:#a78bfa;"></i>键盘从底部滑入，底部内容上移</div>
+      <div class="state-row"><i class="fas fa-circle" style="color:#a78bfa;"></i>词条面板展开：互动 / 提问 / 鼓励打赏</div>
+      <div class="state-row"><i class="fas fa-circle" style="color:#a78bfa;"></i>输入框橙色高亮，点击键盘字母实时输入</div>
+      <div class="state-row"><i class="fas fa-circle" style="color:#a78bfa;"></i>点击词条一键发送，面板 + 键盘自动收起</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="triggerOpen()">
+        <i class="fas fa-keyboard"></i> 演示展开态
+      </button>
+      <button class="btn btn-secondary" onclick="triggerClose()">
+        <i class="fas fa-compress-alt"></i> 恢复默认态
+      </button>
+      <button class="btn btn-secondary" onclick="reloadIframe()">
+        <i class="fas fa-redo"></i> 重置
+      </button>
+    </div>
+
+    <div class="tip">
+      <i class="fas fa-lightbulb" style="margin-top:2px;flex-shrink:0;"></i>
+      <span>点击「演示展开态」或直接点击手机内输入框，键盘从底部滑入，词条面板同步展开</span>
+    </div>
+  </div>
+
+  <script>
+    const iframe = document.getElementById('liveIframe');
+    const keyboard = document.getElementById('mockKeyboard');
+    const KB_HEIGHT = 248;
+
+    function getIWin() { return iframe.contentWindow; }
+
+    function showKeyboard() {
+      keyboard.classList.add('show');
+      // 通知 iframe 键盘高度，底部内容上移
+      setTimeout(() => {
+        try { getIWin().setKbOffset(KB_HEIGHT); } catch(e) {}
+      }, 30);
+    }
+
+    function hideKeyboard() {
+      keyboard.classList.remove('show');
+      try { getIWin().setKbOffset(0); } catch(e) {}
+    }
+
+    /* iframe 通过 postMessage 通知外层显隐键盘 */
+    window.addEventListener('message', (e) => {
+      if (e.data === 'kb:show') showKeyboard();
+      if (e.data === 'kb:hide') hideKeyboard();
+    });
+
+    function triggerOpen() {
+      try {
+        const iwin = getIWin();
+        if (!iwin.panelOpen) iwin.openPanel();
+      } catch(e) {}
+      showKeyboard();
+    }
+    function triggerClose() {
+      try { getIWin().closePanel(); } catch(e) {}
+      hideKeyboard();
+    }
+    function reloadIframe() { hideKeyboard(); iframe.src = 'pages/live_room_v2.html?' + Date.now(); }
+
+    function kbType(key) {
+      try {
+        const input = getIWin().document.getElementById('msgInput');
+        if (!input) return;
+        if (key === 'del') input.value = input.value.slice(0, -1);
+        else input.value += key;
+      } catch(e) {}
+    }
+    function kbSend() { try { getIWin().doSend(); } catch(e){} }
+  </script>
+</body>
+</html>

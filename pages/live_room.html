@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>直播间 — 推荐词条原型</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *{-webkit-tap-highlight-color:transparent;box-sizing:border-box;margin:0;padding:0;}
+    html,body{height:100%;overflow:hidden;background:#000;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",Arial,sans-serif;}
+
+    /* ===== 词条气泡（A方案） ===== */
+    .word-chip{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:20px;font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer;border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);transition:transform .12s,opacity .12s;animation:chipIn .35s cubic-bezier(.34,1.56,.64,1) both;}
+    .word-chip:nth-child(1){animation-delay:.0s}.word-chip:nth-child(2){animation-delay:.06s}.word-chip:nth-child(3){animation-delay:.12s}
+    .word-chip:active{transform:scale(.9);opacity:.75;}
+    @keyframes chipIn{from{opacity:0;transform:translateY(10px) scale(.9)}to{opacity:1;transform:translateY(0) scale(1)}}
+    .chip-pink{background:rgba(255,90,120,.22);color:#ffd0dc;}
+    .chip-blue{background:rgba(80,160,255,.22);color:#c8e4ff;}
+    .chip-green{background:rgba(60,210,150,.22);color:#c0f0e0;}
+
+    /* ===== 弹幕 ===== */
+    .dm{display:inline-flex;align-items:center;gap:5px;background:rgba(0,0,0,.45);backdrop-filter:blur(8px);border-radius:20px;padding:5px 10px;font-size:13px;color:#fff;max-width:240px;animation:dmIn .3s ease;margin-bottom:5px;}
+    @keyframes dmIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+    .av{width:18px;height:18px;border-radius:50%;object-fit:cover;flex-shrink:0;}
+    .fan-badge{background:linear-gradient(90deg,#ff6b8a,#ff4d6d);border-radius:4px;padding:1px 5px;font-size:10px;color:#fff;font-weight:700;}
+
+    /* ===== 底部输入条（收起态） ===== */
+    .input-wrap{flex:1;background:rgba(255,255,255,.1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.15);border-radius:24px;display:flex;align-items:center;padding:0 14px;height:40px;cursor:text;}
+    .input-wrap .stub{flex:1;font-size:13px;color:rgba(255,255,255,.4);pointer-events:none;}
+    .send-btn{width:40px;height:40px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#ff6b8a,#e8365d);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(232,54,93,.45);cursor:pointer;transition:transform .12s;}
+    .send-btn:active{transform:scale(.88);}
+    .tool-btn{width:38px;height:38px;border-radius:50%;flex-shrink:0;background:rgba(0,0,0,.38);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;transition:transform .1s;color:#fff;}
+    .tool-btn:active{transform:scale(.88);}
+    .tool-btn span{font-size:10px;color:rgba(255,255,255,.6);}
+
+    /* ===== 礼物卡 ===== */
+    .gift-card{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,rgba(255,180,0,.22),rgba(255,80,0,.22));backdrop-filter:blur(12px);border:1px solid rgba(255,180,0,.28);border-radius:24px;padding:6px 14px 6px 6px;animation:giftIn .4s cubic-bezier(.34,1.56,.64,1);}
+    @keyframes giftIn{from{opacity:0;transform:translateX(-16px) scale(.88)}to{opacity:1;transform:translateX(0) scale(1)}}
+
+    /* ===== 状态浮条 ===== */
+    .state-bar{position:absolute;top:58px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:5px 14px;font-size:11px;color:rgba(255,255,255,.65);white-space:nowrap;pointer-events:none;z-index:50;transition:opacity .4s;}
+    .live-dot{display:inline-block;width:6px;height:6px;background:#ff3b30;border-radius:50%;margin-right:4px;animation:blink 1.2s infinite;}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+
+    /* ===== Toast ===== */
+    #toast{position:fixed;bottom:108px;left:50%;transform:translateX(-50%) translateY(8px);background:rgba(30,200,100,.88);backdrop-filter:blur(10px);color:#fff;font-size:13px;padding:8px 20px;border-radius:20px;opacity:0;transition:all .25s;pointer-events:none;z-index:999;white-space:nowrap;}
+
+    #bubbleZone{transition:opacity .4s,transform .4s;}
+
+    /* ===== 输入面板（键盘呼起后） ===== */
+    #panelBackdrop{position:fixed;inset:0;z-index:199;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .28s;}
+    #panelBackdrop.show{opacity:1;pointer-events:auto;}
+    #inputPanel{position:fixed;bottom:0;left:0;right:0;z-index:200;transform:translateY(100%);transition:transform .32s cubic-bezier(.32,1,.42,1);}
+    #inputPanel.open{transform:translateY(0);}
+
+    /* 面板壳 */
+    .panel-shell{background:rgba(20,16,32,.96);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border-top:1px solid rgba(255,255,255,.1);border-radius:20px 20px 0 0;}
+    .panel-drag{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,.18);margin:10px auto 0;}
+
+    /* 分类 tab */
+    .cat-tab{display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:16px;font-size:12px;color:rgba(255,255,255,.45);cursor:pointer;white-space:nowrap;transition:all .15s;border:1px solid transparent;}
+    .cat-tab.active{background:rgba(255,107,138,.18);color:#ffb8cc;border-color:rgba(255,107,138,.28);}
+
+    /* 面板词条 */
+    .p-chip{display:inline-flex;align-items:center;gap:5px;padding:8px 15px;border-radius:20px;font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer;border:1px solid rgba(255,255,255,.12);transition:transform .1s,opacity .1s;flex-shrink:0;}
+    .p-chip:active{transform:scale(.88);opacity:.7;}
+    .pc-pink{background:rgba(255,90,120,.2);color:#ffd0dc;}
+    .pc-blue{background:rgba(80,160,255,.2);color:#c8e4ff;}
+    .pc-green{background:rgba(60,210,150,.2);color:#c0f0e0;}
+    .pc-gold{background:rgba(255,190,0,.18);color:#ffe5a0;}
+    .pc-purple{background:rgba(180,100,255,.2);color:#e8d0ff;}
+    .pc-teal{background:rgba(0,210,200,.18);color:#b0f0f0;}
+    .chip-scroll{display:flex;gap:8px;overflow-x:auto;padding:8px 12px;scrollbar-width:none;}
+    .chip-scroll::-webkit-scrollbar{display:none;}
+
+    /* LLM标记 */
+    .llm-tag{font-size:9px;padding:1px 5px;border-radius:5px;background:rgba(255,107,138,.18);color:#ffaac0;border:1px solid rgba(255,107,138,.2);margin-left:2px;}
+
+    /* 面板输入行 */
+    .panel-input-row{display:flex;align-items:center;gap:8px;padding:8px 12px 12px;}
+    .p-input-box{flex:1;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:22px;display:flex;align-items:center;padding:0 14px;height:42px;}
+    .p-input-box input{background:transparent;border:none;outline:none;color:#fff;font-size:14px;flex:1;caret-color:#ff6b8a;}
+    .p-input-box input::placeholder{color:rgba(255,255,255,.4);font-size:13px;}
+    .p-send{width:42px;height:42px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#ff6b8a,#e8365d);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(232,54,93,.4);cursor:pointer;transition:transform .1s;}
+    .p-send:active{transform:scale(.88);}
+
+    /* 模拟键盘 */
+    .fake-kb{background:#1a1728;padding:6px 4px 8px;border-top:1px solid rgba(255,255,255,.06);}
+    .kb-row{display:flex;gap:5px;justify-content:center;margin-bottom:5px;}
+    .kb-key{flex:1;max-width:33px;height:44px;border-radius:8px;background:rgba(255,255,255,.13);display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;font-weight:500;cursor:pointer;border-bottom:2px solid rgba(0,0,0,.5);user-select:none;transition:transform .07s;}
+    .kb-key:active{transform:scale(.88);background:rgba(255,255,255,.22);}
+    .kb-key.sp{background:rgba(255,255,255,.07);font-size:11px;color:rgba(255,255,255,.4);}
+    .kb-key.del{flex:1.5;max-width:none;font-size:12px;background:rgba(255,255,255,.07);}
+    .kb-key.done{background:linear-gradient(135deg,#ff6b8a,#e8365d);color:#fff;font-size:12px;font-weight:700;flex:2;max-width:none;border-bottom-color:rgba(180,20,50,.6);}
+    .kb-key.num{flex:2;max-width:none;background:rgba(255,255,255,.07);font-size:12px;}
+    .kb-key.space{flex:5;max-width:none;font-size:12px;color:rgba(255,255,255,.4);}
+  </style>
+</head>
+<body>
+
+<!-- 背景 -->
+<div style="position:absolute;inset:0;z-index:0;">
+  <img src="https://images.unsplash.com/photo-1598550476439-6847785fcea6?auto=format&fit=crop&w=430&q=80"
+       style="width:100%;height:100%;object-fit:cover;opacity:.72;" alt="">
+  <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.32) 0%,transparent 28%,transparent 52%,rgba(0,0,0,.68) 100%);"></div>
+</div>
+
+<!-- 内容层 -->
+<div style="position:relative;z-index:10;height:100%;display:flex;flex-direction:column;">
+
+  <!-- 顶部主播信息 -->
+  <div style="padding:14px 14px 0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.4);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.1);border-radius:22px;padding:5px 12px 5px 5px;">
+      <img src="https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=80&q=80" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,107,138,.7);" alt="">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#fff;line-height:1.2;">小鱼出没</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.55);">微博直播</div>
+      </div>
+      <div style="background:rgba(255,107,138,.9);border-radius:10px;padding:3px 10px;font-size:12px;color:#fff;font-weight:600;cursor:pointer;">+ 关注</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div style="background:rgba(0,0,0,.4);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:3px 10px;font-size:12px;color:rgba(255,255,255,.8);"><span class="live-dot"></span>3.2万在线</div>
+      <div style="width:30px;height:30px;background:rgba(0,0,0,.4);backdrop-filter:blur(8px);border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.1);cursor:pointer;"><i class="fa fa-times" style="color:rgba(255,255,255,.8);font-size:13px;"></i></div>
+    </div>
+  </div>
+
+  <!-- 状态浮条 -->
+  <div class="state-bar" id="stateBar"><span class="live-dot"></span><span id="stateText">【A方案】首次进入 — 气泡引导中（8秒后自动切换）</span></div>
+
+  <!-- 弹幕区 -->
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;padding:0 12px 10px;overflow:hidden;">
+    <div class="gift-card" style="margin-bottom:10px;align-self:flex-start;">
+      <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=60&q=80" style="width:28px;height:28px;border-radius:50%;object-fit:cover;" alt="">
+      <div>
+        <div style="font-size:12px;font-weight:600;color:#fff;">咖啡拿铁 <span style="color:#ffd700;">送出 🎁 星愿礼盒</span></div>
+        <div style="font-size:10px;color:rgba(255,255,255,.55);">感谢支持～</div>
+      </div>
+    </div>
+    <div id="dmList" style="display:flex;flex-direction:column;align-items:flex-start;">
+      <div class="dm"><img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=40&q=80" class="av" alt=""><span class="fan-badge">团</span><span>团长来报到！💕</span></div>
+      <div class="dm"><img src="https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=crop&w=40&q=80" class="av" alt=""><span>主播这个色号真的好看</span></div>
+      <div class="dm"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=40&q=80" class="av" alt=""><span>链接在哪里买啊</span></div>
+    </div>
+  </div>
+
+
+  <!-- 底部交互区（收起态） -->
+  <div style="padding:0 12px 32px;flex-shrink:0;">
+
+    <!-- A方案气泡区 -->
+    <div id="bubbleZone" style="margin-bottom:8px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="font-size:11px;color:rgba(255,255,255,.5);display:flex;align-items:center;gap:4px;"><i class="fa fa-magic" style="font-size:10px;"></i> 推荐你说</div>
+        <div onclick="refreshChips()" style="font-size:11px;color:rgba(255,255,255,.4);display:flex;align-items:center;gap:4px;cursor:pointer;padding:2px 4px;"><i class="fa fa-sync-alt" style="font-size:10px;"></i> 换一批</div>
+      </div>
+      <div id="chipRow" style="display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;"></div>
+    </div>
+
+    <!-- 输入行（收起态） -->
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="input-wrap" id="inputWrap" onclick="openPanel()">
+        <span class="stub" id="inputStub">说点什么...</span>
+      </div>
+      <div class="tool-btn" style="border:none;background:rgba(0,0,0,.35);">
+        <i class="fa fa-heart" style="font-size:17px;color:#ff6b8a;"></i><span>点赞</span>
+      </div>
+      <div class="tool-btn" style="border:none;background:rgba(0,0,0,.35);">
+        <i class="fa fa-gift" style="font-size:17px;color:#ffd700;"></i><span>礼物</span>
+      </div>
+      <div class="tool-btn" style="border:none;background:rgba(0,0,0,.35);">
+        <i class="fa fa-share-alt" style="font-size:17px;color:rgba(255,255,255,.85);"></i><span>分享</span>
+      </div>
+      <div class="send-btn" onclick="sendMsg()">
+        <i class="fa fa-paper-plane" style="color:#fff;font-size:15px;"></i>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end 内容层 -->
+
+<!-- ===== 输入面板遮罩 ===== -->
+<div id="panelBackdrop" onclick="closePanel()"></div>
+
+<!-- ===== 输入面板（键盘呼起态） ===== -->
+<div id="inputPanel">
+  <div class="panel-shell">
+    <div class="panel-drag"></div>
+
+    <!-- 面板头部：分类 tab -->
+    <div style="display:flex;align-items:center;gap:6px;padding:10px 12px 0;overflow-x:auto;scrollbar-width:none;">
+      <div class="cat-tab active" onclick="switchCat(this,'all')"><i class="fa fa-th" style="font-size:10px;"></i> 全部</div>
+      <div class="cat-tab" onclick="switchCat(this,'chat')"><i class="fa fa-fire" style="font-size:10px;color:#ff9a6c;"></i> 热门互动</div>
+      <div class="cat-tab" onclick="switchCat(this,'buy')"><i class="fa fa-shopping-bag" style="font-size:10px;"></i> 购买咨询</div>
+      <div class="cat-tab" onclick="switchCat(this,'fan')"><i class="fa fa-heart" style="font-size:10px;color:#ff6b8a;"></i> 粉丝专属</div>
+      <div class="cat-tab" onclick="switchCat(this,'llm')"><i class="fa fa-robot" style="font-size:10px;color:#ffaac0;"></i> AI推荐</div>
+    </div>
+
+    <!-- 词条滚动区 -->
+    <div class="chip-scroll" id="panelChips"></div>
+
+    <!-- 分隔线 -->
+    <div style="height:1px;background:rgba(255,255,255,.06);margin:0 12px;"></div>
+
+    <!-- 输入行 -->
+    <div class="panel-input-row">
+      <div class="p-input-box">
+        <input type="text" id="panelInput" placeholder="说点什么..." oninput="onPanelInput(this)" autocomplete="off">
+      </div>
+      <div class="p-send" onclick="sendFromPanel()"><i class="fa fa-paper-plane" style="color:#fff;font-size:15px;"></i></div>
+    </div>
+
+    <!-- 模拟键盘 -->
+    <div class="fake-kb">
+      <div class="kb-row">
+        <div class="kb-key" onclick="typeKey('q')">q</div><div class="kb-key" onclick="typeKey('w')">w</div><div class="kb-key" onclick="typeKey('e')">e</div><div class="kb-key" onclick="typeKey('r')">r</div><div class="kb-key" onclick="typeKey('t')">t</div><div class="kb-key" onclick="typeKey('y')">y</div><div class="kb-key" onclick="typeKey('u')">u</div><div class="kb-key" onclick="typeKey('i')">i</div><div class="kb-key" onclick="typeKey('o')">o</div><div class="kb-key" onclick="typeKey('p')">p</div>
+      </div>
+      <div class="kb-row">
+        <div style="flex:.5;max-width:16px;"></div>
+        <div class="kb-key" onclick="typeKey('a')">a</div><div class="kb-key" onclick="typeKey('s')">s</div><div class="kb-key" onclick="typeKey('d')">d</div><div class="kb-key" onclick="typeKey('f')">f</div><div class="kb-key" onclick="typeKey('g')">g</div><div class="kb-key" onclick="typeKey('h')">h</div><div class="kb-key" onclick="typeKey('j')">j</div><div class="kb-key" onclick="typeKey('k')">k</div><div class="kb-key" onclick="typeKey('l')">l</div>
+        <div style="flex:.5;max-width:16px;"></div>
+      </div>
+      <div class="kb-row">
+        <div class="kb-key del" onclick="typeKey('⌫')"><i class="fa fa-delete-left" style="font-size:14px;"></i></div>
+        <div class="kb-key" onclick="typeKey('z')">z</div><div class="kb-key" onclick="typeKey('x')">x</div><div class="kb-key" onclick="typeKey('c')">c</div><div class="kb-key" onclick="typeKey('v')">v</div><div class="kb-key" onclick="typeKey('b')">b</div><div class="kb-key" onclick="typeKey('n')">n</div><div class="kb-key" onclick="typeKey('m')">m</div>
+        <div class="kb-key done" onclick="sendFromPanel()">发送</div>
+      </div>
+      <div class="kb-row">
+        <div class="kb-key num" onclick="typeKey('123')">123</div>
+        <div class="kb-key sp" onclick="typeKey('😊')">😊</div>
+        <div class="kb-key space" onclick="typeKey(' ')">空格</div>
+        <div class="kb-key sp" onclick="typeKey('，')">，</div>
+        <div class="kb-key num" onclick="typeKey('。')">。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast">已发送 ✓</div>
+
+<script>
+// ===== 数据 =====
+const BUBBLE_SETS = [
+  [{t:'第一次来～',c:'chip-pink',i:'fa-star'},{t:'好看！',c:'chip-blue',i:'fa-fire'},{t:'链接放哪',c:'chip-green',i:'fa-link'}],
+  [{t:'主播加油！',c:'chip-pink',i:'fa-heart'},{t:'求上架',c:'chip-blue',i:'fa-shopping-cart'},{t:'这个多少钱',c:'chip-green',i:'fa-tag'}],
+  [{t:'太绝了！',c:'chip-pink',i:'fa-crown'},{t:'好嗨哦',c:'chip-blue',i:'fa-music'},{t:'下次还来',c:'chip-green',i:'fa-redo'}],
+];
+const PH_WORDS = ['这款真的好看耶～','主播讲得太清楚了','可以发购买链接吗','求主播推荐颜色','好想买！','颜色好正','主播加油！','这个适合我吗','已经加购了！','粉丝团集合～'];
+const MOCK_DM = ['这个口红色号太绝了','主播皮肤好好','求链接！！','好嗨哦~','主播加油','这款多少钱呀','粉丝团 yyds'];
+const AVATARS = [
+  'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=40&q=80',
+  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=40&q=80',
+  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=40&q=80',
+  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=40&q=80',
+];
+
+// 面板词条数据（分类）
+const PANEL_CHIPS = {
+  all: [
+    {t:'好看！',c:'pc-pink',src:'llm'},{t:'链接放哪',c:'pc-blue',src:'llm'},{t:'这个多少钱',c:'pc-green',src:'lib'},
+    {t:'主播加油',c:'pc-gold',src:'lib'},{t:'求推荐',c:'pc-purple',src:'llm'},{t:'太绝了！',c:'pc-teal',src:'llm'},
+    {t:'可以发货吗',c:'pc-blue',src:'lib'},{t:'已加购',c:'pc-pink',src:'llm'},{t:'颜色好正',c:'pc-green',src:'llm'},
+  ],
+  chat: [
+    {t:'好看！',c:'pc-pink',src:'llm'},{t:'太绝了！',c:'pc-teal',src:'llm'},{t:'颜色好正',c:'pc-green',src:'llm'},
+    {t:'主播加油',c:'pc-gold',src:'lib'},{t:'好嗨哦',c:'pc-purple',src:'lib'},{t:'哈哈哈哈',c:'pc-blue',src:'llm'},
+  ],
+  buy: [
+    {t:'链接放哪',c:'pc-blue',src:'llm'},{t:'这个多少钱',c:'pc-green',src:'lib'},{t:'可以发货吗',c:'pc-blue',src:'lib'},
+    {t:'有没有优惠',c:'pc-gold',src:'llm'},{t:'已加购',c:'pc-pink',src:'llm'},{t:'求上架',c:'pc-purple',src:'lib'},
+  ],
+  fan: [
+    {t:'团长来了',c:'pc-pink',src:'fan'},{t:'粉丝团集合',c:'pc-purple',src:'fan'},{t:'老粉支持',c:'pc-gold',src:'fan'},
+    {t:'一直都在',c:'pc-teal',src:'fan'},{t:'❤️ 爱你',c:'pc-pink',src:'fan'},
+  ],
+  llm: [
+    {t:'这款色号超日常',c:'pc-pink',src:'llm'},{t:'主播皮肤好好',c:'pc-teal',src:'llm'},{t:'这个适合我吗',c:'pc-blue',src:'llm'},
+    {t:'颜值天花板了',c:'pc-purple',src:'llm'},{t:'求同款',c:'pc-green',src:'llm'},
+  ],
+};
+
+// ===== 状态 =====
+let mode = 'bubble';
+let activated = false;
+let chipSetIdx = 0;
+let phIdx = 0;
+let phTimer = null;
+let autoHideTimer = null;
+let isTyping = false;
+let mockDmIdx = 0;
+let panelOpen = false;
+let currentCat = 'all';
+
+// ===== 初始化 =====
+renderChips();
+startAutoHide();
+renderPanelChips('all');
+setInterval(addMockDm, 3800);
+
+function renderChips() {
+  const row = document.getElementById('chipRow');
+  const set = BUBBLE_SETS[chipSetIdx];
+  row.innerHTML = set.map(w=>`<div class="word-chip ${w.c}" onclick="onChipClick('${w.t}')"><i class="fa ${w.i}" style="font-size:10px;"></i> ${w.t}</div>`).join('');
+}
+
+function startAutoHide() {
+  autoHideTimer = setTimeout(()=>{ if(!activated) switchToPlaceholder(); },8000);
+}
+
+function switchToPlaceholder() {
+  if(activated) return;
+  activated = true; mode = 'placeholder';
+  const z = document.getElementById('bubbleZone');
+  z.style.opacity='0'; z.style.transform='translateY(8px)';
+  setTimeout(()=>{ z.style.display='none'; },400);
+  document.getElementById('stateText').textContent = '【D方案】Placeholder 轮播中 — 点击输入框呼起输入面板';
+  startPlaceholder();
+}
+
+function startPlaceholder() {
+  setStub();
+  phTimer = setInterval(()=>{
+    if(!isTyping && !panelOpen){ phIdx=(phIdx+1)%PH_WORDS.length; setStub(); }
+  },3000);
+}
+
+function setStub() {
+  document.getElementById('inputStub').textContent = PH_WORDS[phIdx];
+}
+
+function onChipClick(text) {
+  clearTimeout(autoHideTimer);
+  setTimeout(()=> switchToPlaceholder(),250);
+  openPanel(text);
+}
+
+function refreshChips() {
+  chipSetIdx=(chipSetIdx+1)%BUBBLE_SETS.length;
+  const row=document.getElementById('chipRow');
+  row.style.opacity='0'; row.style.transform='translateY(5px)'; row.style.transition='opacity .2s,transform .2s';
+  setTimeout(()=>{ renderChips(); row.style.opacity='1'; row.style.transform='translateY(0)'; },200);
+}
+
+// ===== 面板开关 =====
+function openPanel(prefill) {
+  panelOpen = true;
+  document.getElementById('inputPanel').classList.add('open');
+  document.getElementById('panelBackdrop').classList.add('show');
+  document.getElementById('stateText').textContent = '【输入面板】已呼起 — 词条直接填入输入框';
+
+  if(prefill) {
+    document.getElementById('panelInput').value = prefill;
+    isTyping = true;
+  } else if(mode === 'placeholder') {
+    // placeholder 词条自动填入
+    document.getElementById('panelInput').value = PH_WORDS[phIdx];
+    isTyping = true;
+    phIdx = (phIdx+1)%PH_WORDS.length;
+    setStub();
+  }
+}
+
+function closePanel() {
+  panelOpen = false;
+  document.getElementById('inputPanel').classList.remove('open');
+  document.getElementById('panelBackdrop').classList.remove('show');
+  isTyping = false;
+  if(mode==='placeholder') document.getElementById('stateText').textContent='【D方案】Placeholder 轮播中 — 点击输入框呼起输入面板';
+  else if(mode==='bubble') document.getElementById('stateText').textContent='【A方案】首次进入 — 气泡引导中（8秒后自动切换）';
+}
+
+// ===== 面板词条 =====
+function renderPanelChips(cat) {
+  currentCat = cat;
+  const chips = PANEL_CHIPS[cat] || PANEL_CHIPS.all;
+  const container = document.getElementById('panelChips');
+  container.innerHTML = chips.map(w=>{
+    const srcLabel = w.src==='llm' ? '<span class="llm-tag">AI</span>' : w.src==='fan' ? '<span class="llm-tag" style="background:rgba(180,100,255,.2);color:#e8d0ff;border-color:rgba(180,100,255,.2);">粉丝</span>' : '';
+    return `<div class="p-chip ${w.c}" onclick="fillPanelInput('${w.t}')">${w.t}${srcLabel}</div>`;
+  }).join('');
+}
+
+function switchCat(el, cat) {
+  document.querySelectorAll('.cat-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderPanelChips(cat);
+}
+
+function fillPanelInput(text) {
+  const inp = document.getElementById('panelInput');
+  inp.value = text;
+  isTyping = true;
+  inp.focus();
+}
+
+function onPanelInput(inp) {
+  isTyping = inp.value.length > 0;
+}
+
+// ===== 模拟键盘输入 =====
+function typeKey(k) {
+  const inp = document.getElementById('panelInput');
+  if(k==='⌫') {
+    inp.value = inp.value.slice(0,-1);
+  } else if(k==='发送') {
+    sendFromPanel();
+  } else {
+    inp.value += k;
+  }
+  isTyping = inp.value.length > 0;
+}
+
+// ===== 发送 =====
+function sendFromPanel() {
+  const inp = document.getElementById('panelInput');
+  const text = inp.value.trim();
+  if(!text) return;
+  appendDm(text, null, true);
+  inp.value=''; isTyping=false;
+  showToast('已发送 ✓');
+  closePanel();
+  if(mode==='bubble'){ clearTimeout(autoHideTimer); switchToPlaceholder(); }
+  else { phIdx=(phIdx+2)%PH_WORDS.length; setStub(); }
+}
+
+function sendMsg() {
+  // 收起态发送按钮 → 先开面板
+  openPanel();
+}
+
+function appendDm(text, avatarUrl, isSelf) {
+  const list = document.getElementById('dmList');
+  const av = avatarUrl||AVATARS[Math.floor(Math.random()*AVATARS.length)];
+  const div = document.createElement('div');
+  div.className='dm';
+  div.innerHTML=`<img src="${av}" class="av" alt=""><span>${isSelf?'<span style="color:#ffd0dc;font-size:11px;">我</span> ':''}${text}</span>`;
+  list.appendChild(div);
+  while(list.children.length>7) list.removeChild(list.firstChild);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent=msg; t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(0)';
+  setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(8px)'; },1600);
+}
+
+function addMockDm() {
+  if(Math.random()>.35){ appendDm(MOCK_DM[mockDmIdx%MOCK_DM.length],AVATARS[mockDmIdx%AVATARS.length],false); mockDmIdx++; }
+}
+</script>
+</body>
+</html>

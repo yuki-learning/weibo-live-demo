@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>直播间 · 词条引导 A+B</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: black; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif; }
+
+    .layer { position: absolute; left: 0; right: 0; }
+
+    /* 词条标签 */
+    .tag {
+      display: inline-flex; align-items: center; gap: 3px;
+      white-space: nowrap; flex-shrink: 0; cursor: pointer;
+      border-radius: 18px; padding: 5px 11px;
+      font-size: 12px; font-weight: 500; color: white;
+      transition: transform 0.15s, opacity 0.15s;
+    }
+    .tag:active { transform: scale(0.88); }
+    .tag.used { opacity: 0.35; pointer-events: none; }
+    .tag-pink  { background: linear-gradient(135deg,rgba(251,113,133,.28),rgba(251,146,60,.2)); border:1px solid rgba(251,113,133,.45); }
+    .tag-blue  { background: linear-gradient(135deg,rgba(139,92,246,.28),rgba(59,130,246,.2)); border:1px solid rgba(139,92,246,.45); }
+    .tag-green { background: linear-gradient(135deg,rgba(34,197,94,.22),rgba(234,179,8,.18)); border:1px solid rgba(34,197,94,.4); }
+    .tag-gold  { background: linear-gradient(135deg,rgba(234,179,8,.25),rgba(251,113,133,.18)); border:1px solid rgba(234,179,8,.5); }
+
+    /* 滚动条隐藏 */
+    .no-sb { overflow-x: auto; -ms-overflow-style: none; scrollbar-width: none; }
+    .no-sb::-webkit-scrollbar { display: none; }
+
+    /* 输入框胶囊 */
+    .input-pill {
+      flex: 1; display: flex; align-items: center; gap: 8px;
+      border-radius: 22px; padding: 9px 14px;
+      background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.13);
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .input-pill.focused {
+      border-color: rgba(249,115,22,.6);
+      box-shadow: 0 0 0 3px rgba(249,115,22,.12);
+    }
+    .input-pill input {
+      flex: 1; background: transparent; border: none; outline: none;
+      color: white; font-size: 13px;
+    }
+    .input-pill input::placeholder { color: rgba(255,255,255,.35); }
+
+    /* 展开词条面板 */
+    #expandPanel {
+      overflow: hidden;
+      max-height: 0; opacity: 0;
+      transition: max-height .35s cubic-bezier(.32,.72,0,1), opacity .25s ease;
+    }
+    #expandPanel.open { max-height: 230px; opacity: 1; }
+
+    /* 默认单行词条 */
+    #defaultRow {
+      transition: max-height .28s ease, opacity .22s ease, margin .22s ease;
+      max-height: 60px; opacity: 1; overflow: hidden;
+    }
+    #defaultRow.hidden { max-height: 0; opacity: 0; margin-bottom: 0 !important; }
+
+    /* 展开面板背景 */
+    #panelBg {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      background: rgba(10,10,18,.92); backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+      border-radius: 20px 20px 0 0; border-top: 1px solid rgba(255,255,255,.07);
+      transition: height .35s cubic-bezier(.32,.72,0,1);
+      pointer-events: none;
+      height: 68px;
+      z-index: 1;
+    }
+    #panelBg.expanded { height: 300px; }
+
+    /* 弹幕气泡 */
+    .dm-bubble {
+      display: inline-flex; gap: 3px;
+      background: rgba(255,255,255,.09); backdrop-filter: blur(12px);
+      border-radius: 14px; padding: 5px 10px; max-width: 88%;
+    }
+    .dm-name { font-size: 11px; font-weight: 600; color: #facc15; }
+    .dm-self { color: #fb923c; }
+    .dm-text { font-size: 11px; color: white; }
+
+    /* 动画 */
+    @keyframes tagIn { from{opacity:0;transform:translateY(7px) scale(.9)} to{opacity:1;transform:none} }
+    @keyframes dmIn  { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:none} }
+    @keyframes heartUp { from{opacity:1;transform:translateY(0) scale(1)} to{opacity:0;transform:translateY(-65px) scale(1.3)} }
+    @keyframes toastAnim {
+      0%{opacity:0;transform:translate(-50%,-50%) scale(.85)}
+      15%{opacity:1;transform:translate(-50%,-50%) scale(1.04)}
+      80%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+      100%{opacity:0;transform:translate(-50%,-50%) scale(.95)}
+    }
+    @keyframes livePulse { 0%,100%{box-shadow:0 0 0 0 rgba(251,113,133,.4)} 50%{box-shadow:0 0 0 7px rgba(251,113,133,0)} }
+
+    .tag-in { animation: tagIn .28s cubic-bezier(.34,1.56,.64,1) both; }
+    .dm-in  { animation: dmIn .26s ease-out both; }
+
+    .live-dot { background: linear-gradient(90deg,#ef4444,#f97316); animation: livePulse 2s infinite; }
+
+    /* Toast */
+    #toast {
+      position: fixed; top: 50%; left: 50%; z-index: 999;
+      transform: translate(-50%,-50%) scale(.85); opacity: 0; pointer-events: none;
+      background: rgba(16,16,24,.92); backdrop-filter: blur(20px);
+      border-radius: 16px; padding: 10px 18px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    #toast.show { animation: toastAnim 1.2s ease forwards; }
+
+    /* 类别小标题 */
+    .cat-label {
+      font-size: 10px; color: rgba(255,255,255,.4); font-weight: 500;
+      display: flex; align-items: center; gap: 4px; margin-bottom: 6px;
+    }
+    .cat-dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+
+    .divider { height: 1px; background: rgba(255,255,255,.07); margin: 8px 0; }
+  </style>
+</head>
+<body>
+
+  <!-- ① 直播背景 -->
+  <div style="position:absolute;inset:0;z-index:0;">
+    <img src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=800&q=85"
+      style="width:100%;height:100%;object-fit:cover;filter:brightness(.68);">
+    <!-- 底部渐变遮罩 -->
+    <div style="position:absolute;inset-x:0;bottom:0;height:65%;background:linear-gradient(to top,rgba(0,0,0,.96) 0%,rgba(0,0,0,.5) 55%,transparent 100%);"></div>
+    <!-- 顶部渐变遮罩 -->
+    <div style="position:absolute;inset-x:0;top:0;height:110px;background:linear-gradient(to bottom,rgba(0,0,0,.72),transparent);"></div>
+  </div>
+
+  <!-- ② 顶部：状态栏 + 主播信息 + 热度 -->
+  <div class="layer" style="top:0;z-index:10;padding:12px 14px 0;">
+    <!-- 状态栏 -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <span style="color:white;font-size:15px;font-weight:600;">9:41</span>
+      <div style="display:flex;gap:5px;align-items:center;">
+        <i class="fas fa-signal" style="color:white;font-size:12px;"></i>
+        <i class="fas fa-wifi" style="color:white;font-size:11px;"></i>
+        <i class="fas fa-battery-three-quarters" style="color:white;font-size:12px;"></i>
+      </div>
+    </div>
+    <!-- 主播行 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="position:relative;flex-shrink:0;">
+          <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=80&q=80"
+            style="width:38px;height:38px;border-radius:50%;border:2px solid #f97316;object-fit:cover;">
+          <div class="live-dot" style="position:absolute;bottom:-3px;left:50%;transform:translateX(-50%);color:white;font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px;white-space:nowrap;">直播</div>
+        </div>
+        <div>
+          <div style="color:white;font-weight:600;font-size:13px;line-height:1.2;">林小晴的时尚频道</div>
+          <div style="color:rgba(255,255,255,.5);font-size:10px;margin-top:2px;">1.2万人观看</div>
+        </div>
+        <button style="background:#ef4444;color:white;font-size:10px;font-weight:600;padding:3px 10px;border-radius:12px;border:none;cursor:pointer;margin-left:2px;">+ 关注</button>
+      </div>
+      <div style="display:flex;gap:13px;color:white;">
+        <i class="fas fa-search" style="font-size:13px;opacity:.8;cursor:pointer;"></i>
+        <i class="fas fa-ellipsis-h" style="font-size:13px;opacity:.8;cursor:pointer;"></i>
+        <i class="fas fa-times" style="font-size:14px;opacity:.8;cursor:pointer;"></i>
+      </div>
+    </div>
+    <!-- 热度行 -->
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <div style="background:rgba(255,255,255,.08);backdrop-filter:blur(16px);border-radius:20px;padding:3px 10px;display:flex;align-items:center;gap:5px;">
+        <i class="fas fa-fire" style="color:#fb923c;font-size:10px;"></i>
+        <span style="color:white;font-size:10px;font-weight:500;">热度 89,632</span>
+      </div>
+      <div style="background:rgba(255,255,255,.08);backdrop-filter:blur(16px);border-radius:20px;padding:3px 10px;display:flex;align-items:center;gap:5px;">
+        <i class="fas fa-gift" style="color:#f472b6;font-size:10px;"></i>
+        <span style="color:white;font-size:10px;">今日礼物 ×234</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 弹幕区 —— 动态 bottom，不与底部重叠 -->
+  <div id="commentZone" class="layer" style="z-index:10;overflow:hidden;">
+    <div id="commentList" style="display:flex;flex-direction:column;gap:6px;overflow-y:auto;max-height:100%;" class="no-sb"></div>
+  </div>
+
+  <!-- ④ 右侧浮动按钮 -->
+  <div style="position:absolute;right:12px;z-index:20;display:flex;flex-direction:column;align-items:center;gap:14px;" id="floatBtns">
+    <button onclick="addHeart()" style="display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;">
+      <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.1);backdrop-filter:blur(16px);display:flex;align-items:center;justify-content:center;">
+        <i class="fas fa-heart" style="color:#fb7185;font-size:16px;"></i>
+      </div>
+      <span style="color:white;font-size:9px;">1.2k</span>
+    </button>
+    <button style="display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;">
+      <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.1);backdrop-filter:blur(16px);display:flex;align-items:center;justify-content:center;">
+        <i class="fas fa-share" style="color:white;font-size:14px;"></i>
+      </div>
+      <span style="color:white;font-size:9px;">分享</span>
+    </button>
+    <button style="display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;">
+      <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#f97316,#ef4444);display:flex;align-items:center;justify-content:center;">
+        <i class="fas fa-shopping-bag" style="color:white;font-size:14px;"></i>
+      </div>
+      <span style="color:white;font-size:9px;">橱窗</span>
+    </button>
+  </div>
+
+  <!-- 爱心容器 -->
+  <div id="heartBox" style="position:absolute;right:14px;width:44px;height:90px;overflow:hidden;pointer-events:none;z-index:19;"></div>
+
+  <!-- ⑤ 底部区域（面板背景 + 内容） -->
+  <div class="layer" style="bottom:0;z-index:30;" id="bottomArea">
+
+    <!-- 模糊背景板 -->
+    <div id="panelBg"></div>
+
+    <!-- 内容（在背景板之上） -->
+    <div style="position:relative;z-index:2;padding:0 12px 20px;">
+
+      <!-- 展开词条面板 -->
+      <div id="expandPanel">
+        <div style="padding-top:14px;padding-bottom:10px;">
+          <!-- 面板标题行 -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <i class="fas fa-magic" style="color:#a78bfa;font-size:10px;"></i>
+              <span style="color:rgba(255,255,255,.55);font-size:11px;">推荐词条</span>
+            </div>
+            <button onclick="refreshPanel()" style="display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:3px 9px;cursor:pointer;color:rgba(255,255,255,.5);font-size:10px;">
+              <i class="fas fa-sync-alt" id="panelRefreshIcon" style="font-size:8px;"></i> 换一换
+            </button>
+          </div>
+          <!-- 互动 -->
+          <div class="cat-label"><span class="cat-dot" style="background:#fb7185;"></span>互动</div>
+          <div style="display:flex;gap:7px;margin-bottom:0;" class="no-sb" id="panelCat0">
+            <button class="tag tag-pink tag-in" style="animation-delay:.04s" onclick="pickPanelTag(this,'哈哈哈太搞笑了 😂')">哈哈哈太搞笑了 😂 <span style="color:#fb923c;font-size:9px;">🔥3.1k</span></button>
+            <button class="tag tag-pink tag-in" style="animation-delay:.09s" onclick="pickPanelTag(this,'主播好美！')">主播好美！</button>
+            <button class="tag tag-pink tag-in" style="animation-delay:.14s" onclick="pickPanelTag(this,'这也太棒了吧')">这也太棒了吧</button>
+          </div>
+          <div class="divider"></div>
+          <!-- 提问 -->
+          <div class="cat-label"><span class="cat-dot" style="background:#818cf8;"></span>提问</div>
+          <div style="display:flex;gap:7px;margin-bottom:0;" class="no-sb" id="panelCat1">
+            <button class="tag tag-blue tag-in" style="animation-delay:.06s" onclick="pickPanelTag(this,'求链接！🔗')">求链接！🔗 <span style="color:#fb923c;font-size:9px;">🔥2.8k</span></button>
+            <button class="tag tag-blue tag-in" style="animation-delay:.11s" onclick="pickPanelTag(this,'这是什么牌子？')">这是什么牌子？</button>
+            <button class="tag tag-blue tag-in" style="animation-delay:.16s" onclick="pickPanelTag(this,'多少钱？')">多少钱？</button>
+            <button class="tag tag-blue tag-in" style="animation-delay:.21s" onclick="pickPanelTag(this,'有优惠码吗？')">有优惠码吗？</button>
+          </div>
+          <div class="divider"></div>
+          <!-- 鼓励 -->
+          <div class="cat-label"><span class="cat-dot" style="background:#4ade80;"></span>鼓励 / 打赏</div>
+          <div style="display:flex;gap:7px;" class="no-sb" id="panelCat2">
+            <button class="tag tag-green tag-in" style="animation-delay:.08s" onclick="pickPanelTag(this,'主播加油！💪')">主播加油！💪</button>
+            <button class="tag tag-green tag-in" style="animation-delay:.13s" onclick="pickPanelTag(this,'太厉害了！')">太厉害了！</button>
+            <button class="tag tag-gold tag-in"  style="animation-delay:.18s" onclick="pickPanelTag(this,'已下单支持🛍️')">已下单支持🛍️</button>
+            <button class="tag tag-gold tag-in"  style="animation-delay:.23s" onclick="pickPanelTag(this,'已送礼物❤️')">已送礼物❤️</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 默认单行词条 -->
+      <div id="defaultRow" style="margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;">
+          <i class="fas fa-magic" style="color:#a78bfa;font-size:8px;"></i>
+          <span style="font-size:10px;color:rgba(255,255,255,.4);">点击词条快速发言</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:0;">
+          <div id="quickTagRow" style="display:flex;gap:7px;flex:1;" class="no-sb"></div>
+          <button onclick="refreshQuick()" style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.08);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-left:7px;flex-shrink:0;">
+            <i id="quickRefreshIcon" class="fas fa-sync-alt" style="color:rgba(255,255,255,.45);font-size:9px;"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- 输入行 -->
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="input-pill" id="inputPill">
+          <input id="msgInput" type="text" placeholder="说点什么..."
+            onfocus="openPanel()"
+            onblur="tryClose()"
+            onkeydown="onKey(event)">
+          <button onclick="doSend()" style="background:none;border:none;cursor:pointer;padding:0;flex-shrink:0;">
+            <i class="fas fa-paper-plane" id="sendIcon" style="color:rgba(255,255,255,.35);font-size:12px;"></i>
+          </button>
+        </div>
+        <button style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#f97316,#ef4444);display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;flex-shrink:0;">
+          <i class="fas fa-gift" style="color:white;font-size:13px;"></i>
+        </button>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /bottomArea -->
+
+  <!-- Toast -->
+  <div id="toast">
+    <i class="fas fa-check-circle" style="color:#4ade80;font-size:14px;"></i>
+    <span style="color:white;font-size:13px;font-weight:500;">发送成功</span>
+  </div>
+
+<script>
+  /* ── 快捷词条数据 ── */
+  const quickSets = [
+    [{t:'哈哈哈 😂',c:'tag-pink',h:'🔥2.1k'},{t:'求链接！🔗',c:'tag-blue'},{t:'主播加油💪',c:'tag-green'},{t:'已下单🛍️',c:'tag-gold'}],
+    [{t:'好好看！',c:'tag-pink',h:'🔥1.8k'},{t:'多少钱？',c:'tag-blue'},{t:'太棒了！',c:'tag-green'},{t:'支持主播❤️',c:'tag-gold'}],
+    [{t:'主播颜值绝了',c:'tag-pink'},{t:'有优惠码吗？',c:'tag-blue',h:'🔥987'},{t:'继续！加油！',c:'tag-green'},{t:'已送礼🎁',c:'tag-gold'}],
+  ];
+  let qIdx = 0;
+  let panelOpen = false;
+
+  const COMMENT_TOP = 140;
+  const COMMENT_PAD = 10;
+
+  // 键盘高度由外层设置
+  let _kbOffset = 0;
+
+  function setKbOffset(h) {
+    _kbOffset = h;
+    updateLayout();
+  }
+
+  function updateLayout() {
+    const bottomH = document.getElementById('bottomArea').getBoundingClientRect().height;
+    const totalH  = bottomH + _kbOffset;
+    const zone      = document.getElementById('commentZone');
+    const floatBtns = document.getElementById('floatBtns');
+    const heartBox  = document.getElementById('heartBox');
+    zone.style.top    = COMMENT_TOP + 'px';
+    zone.style.bottom = (totalH + COMMENT_PAD) + 'px';
+    floatBtns.style.bottom = (totalH + COMMENT_PAD + 24) + 'px';
+    heartBox.style.bottom  = (totalH + COMMENT_PAD + 4) + 'px';
+    document.getElementById('bottomArea').style.bottom = _kbOffset + 'px';
+    document.getElementById('panelBg').style.bottom    = '0';
+  }
+
+  /* ── 初始化 ── */
+  function init() {
+    renderQuick();
+    updateLayout();
+    const lines = [
+      {user:'买买买0917',text:'求链接求链接！'},
+      {user:'时尚达人cc',text:'主播妆容好美😍'},
+      {user:'🌸YOYO',text:'哈哈哈太搞笑了'},
+      {user:'爱购物的我',text:'已经下单了！'},
+      {user:'直播粉丝团',text:'主播加油！！'},
+    ];
+    let i = 0;
+    const names = ['观众小林','🌟时尚控','买手小美','网红仿秀'];
+    const texts = ['好的！','已购买！','主播yyds！','链接！！','太好看了！'];
+    const add = () => {
+      if (i < lines.length) addDm(lines[i++]);
+      else addDm({user:names[~~(Math.random()*names.length)], text:texts[~~(Math.random()*texts.length)]});
+    };
+    [600,1800,3200].forEach(d => setTimeout(add, d));
+    setInterval(add, 2800);
+  }
+
+  /* ── 单行词条渲染 ── */
+  function renderQuick() {
+    const row = document.getElementById('quickTagRow');
+    row.innerHTML = '';
+    quickSets[qIdx].forEach((d,i) => {
+      const b = document.createElement('button');
+      b.className = `tag ${d.c} tag-in`;
+      b.style.animationDelay = (i * .07) + 's';
+      b.innerHTML = d.h ? `${d.t} <span style="color:#fb923c;font-size:9px;margin-left:2px;">${d.h}</span>` : d.t;
+      b.onclick = () => sendQuick(b, d.t);
+      row.appendChild(b);
+    });
+  }
+
+  /* ── 快捷词条点击（单行） ── */
+  function sendQuick(el, text) {
+    el.classList.add('used');
+    sendText(text);
+    setTimeout(() => el.classList.remove('used'), 800);
+  }
+
+  /* ── 展开面板词条点击 ── */
+  function pickPanelTag(el, text) {
+    el.classList.add('used');
+    sendText(text);
+    setTimeout(() => {
+      el.classList.remove('used');
+      closePanel();
+    }, 160);
+  }
+
+  /* ── 发送逻辑 ── */
+  function doSend() {
+    const val = document.getElementById('msgInput').value.trim();
+    if (!val) return;
+    sendText(val);
+    document.getElementById('msgInput').value = '';
+    closePanel();
+  }
+  function sendText(text) {
+    addDm({user:'我', text, self:true});
+    showToast();
+  }
+  function onKey(e) { if (e.key === 'Enter') doSend(); }
+
+  /* ── 面板开关 ── */
+  function openPanel() {
+    if (panelOpen) return;
+    panelOpen = true;
+    document.getElementById('expandPanel').classList.add('open');
+    document.getElementById('panelBg').classList.add('expanded');
+    document.getElementById('defaultRow').classList.add('hidden');
+    document.getElementById('inputPill').classList.add('focused');
+    document.getElementById('sendIcon').style.color = 'rgba(249,115,22,.85)';
+    window.parent.postMessage('kb:show', '*');
+    updateLayout();
+    setTimeout(updateLayout, 360);
+  }
+
+  function closePanel() {
+    panelOpen = false;
+    document.getElementById('expandPanel').classList.remove('open');
+    document.getElementById('panelBg').classList.remove('expanded');
+    document.getElementById('defaultRow').classList.remove('hidden');
+    document.getElementById('inputPill').classList.remove('focused');
+    document.getElementById('sendIcon').style.color = 'rgba(255,255,255,.35)';
+    document.getElementById('msgInput').blur();
+    window.parent.postMessage('kb:hide', '*');
+    updateLayout();
+  }
+
+  function tryClose() {
+    const val = document.getElementById('msgInput').value.trim();
+    if (!val) setTimeout(closePanel, 120);
+  }
+
+  /* ── 换一换 ── */
+  function refreshQuick() {
+    qIdx = (qIdx + 1) % quickSets.length;
+    renderQuick();
+    spin('quickRefreshIcon');
+  }
+  function refreshPanel() {
+    spin('panelRefreshIcon');
+    ['panelCat0','panelCat1','panelCat2'].forEach(id => {
+      const el = document.getElementById(id);
+      el.style.transition = 'opacity .2s';
+      el.style.opacity = '0';
+      setTimeout(() => { el.style.opacity = '1'; }, 260);
+    });
+  }
+  function spin(id) {
+    const el = document.getElementById(id);
+    el.style.transition = 'transform .4s';
+    el.style.transform = 'rotate(360deg)';
+    setTimeout(() => { el.style.transition = ''; el.style.transform = ''; }, 420);
+  }
+
+  /* ── 弹幕 ── */
+  function addDm(c) {
+    const list = document.getElementById('commentList');
+    const div = document.createElement('div');
+    div.className = 'dm-in';
+    div.innerHTML = `<div class="dm-bubble"><span class="dm-name ${c.self?'dm-self':''}">${c.user}&nbsp;</span><span class="dm-text">${c.text}</span></div>`;
+    list.appendChild(div);
+    while (list.children.length > 14) list.removeChild(list.firstChild);
+    list.scrollTop = list.scrollHeight;
+  }
+
+  /* ── 爱心 ── */
+  function addHeart() {
+    const box = document.getElementById('heartBox');
+    const h = document.createElement('div');
+    const ems = ['❤️','🧡','💕','💖','🩷'];
+    h.style.cssText = `position:absolute;bottom:0;right:${Math.random()*16}px;font-size:22px;animation:heartUp ${.9+Math.random()*.5}s ease-out forwards;pointer-events:none;`;
+    h.textContent = ems[~~(Math.random()*ems.length)];
+    box.appendChild(h);
+    setTimeout(() => h.remove(), 1500);
+  }
+
+  /* ── Toast ── */
+  function showToast() {
+    const t = document.getElementById('toast');
+    t.classList.remove('show');
+    void t.offsetWidth;
+    t.classList.add('show');
+  }
+
+  init();
+</script>
+</body>
+</html>

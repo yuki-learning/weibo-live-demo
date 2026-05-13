@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>词条方案对比 — A / B / C</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif; background: #080810; color: white; }
+
+    /* ========= iPhone Shell ========= */
+    .iphone-shell {
+      width: 280px;
+      background: linear-gradient(145deg, #2a2a2a, #1a1a1a, #2a2a2a);
+      border-radius: 44px;
+      padding: 10px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 40px 80px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.1);
+      position: relative;
+      flex-shrink: 0;
+    }
+    .iphone-screen {
+      width: 100%;
+      aspect-ratio: 390/844;
+      border-radius: 36px;
+      overflow: hidden;
+      background: black;
+      position: relative;
+    }
+    .dynamic-island {
+      position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+      width: 88px; height: 26px; background: black; border-radius: 15px; z-index: 100;
+    }
+
+    /* ========= 直播背景（三个手机共用） ========= */
+    .live-bg {
+      position: absolute; inset: 0;
+    }
+    .live-bg img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.65); }
+    .live-bg .grad-bottom { position: absolute; inset-x-0; bottom: 0; height: 70%; background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 55%, transparent 100%); }
+    .live-bg .grad-top { position: absolute; inset-x-0; top: 0; height: 80px; background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent); }
+
+    /* ========= 通用弹幕 ========= */
+    .comment-item { display: flex; }
+    .comment-bubble {
+      background: rgba(255,255,255,0.08); backdrop-filter: blur(10px);
+      border-radius: 14px; padding: 4px 10px; max-width: 90%;
+    }
+    .comment-name { font-size: 10px; font-weight: 600; color: #facc15; }
+    .comment-text { font-size: 10px; color: white; }
+
+    /* 顶部主播栏 */
+    .host-bar {
+      position: absolute; top: 32px; left: 0; right: 0; padding: 0 10px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .host-avatar { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid #f97316; object-fit: cover; }
+    .live-tag { background: linear-gradient(90deg, #ef4444, #f97316); font-size: 8px; font-weight: 700; color: white; padding: 2px 6px; border-radius: 10px; }
+    .follow-btn { background: #ef4444; color: white; font-size: 9px; font-weight: 600; padding: 2px 8px; border-radius: 10px; border: none; cursor: pointer; }
+
+    /* 右侧浮动按钮 */
+    .float-btns {
+      position: absolute; right: 8px; bottom: 120px;
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+    }
+    .float-btn { width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; }
+
+    /* ========= 方案共用输入行 ========= */
+    .bottom-zone { position: absolute; bottom: 0; left: 0; right: 0; padding: 0 8px 12px; }
+    .input-row { display: flex; align-items: center; gap: 6px; }
+    .input-pill {
+      flex: 1; background: rgba(255,255,255,0.1); backdrop-filter: blur(16px);
+      border-radius: 20px; padding: 7px 12px; display: flex; align-items: center; gap: 6px;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    .input-pill input { background: transparent; border: none; outline: none; color: white; font-size: 11px; width: 100%; }
+    .input-pill input::placeholder { color: rgba(255,255,255,0.35); }
+    .gift-btn { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #f97316, #ef4444); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+    /* 词条通用样式 */
+    .word-tag {
+      white-space: nowrap; cursor: pointer; border-radius: 20px; padding: 4px 10px;
+      font-size: 10px; font-weight: 500; color: white; border: 1px solid rgba(255,255,255,0.15);
+      transition: transform 0.15s, opacity 0.15s; flex-shrink: 0;
+    }
+    .word-tag:active { transform: scale(0.9); }
+    .tag-a { background: rgba(251,113,133,0.2); border-color: rgba(251,113,133,0.35); }
+    .tag-b { background: rgba(139,92,246,0.2); border-color: rgba(139,92,246,0.35); }
+    .tag-c { background: rgba(34,197,94,0.18); border-color: rgba(34,197,94,0.3); }
+    .tag-d { background: rgba(234,179,8,0.2); border-color: rgba(234,179,8,0.35); }
+
+    /* 滚动条隐藏 */
+    .no-scroll::-webkit-scrollbar { display: none; }
+    .no-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* 卡片标签 */
+    .plan-label {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+      padding: 4px 12px; border-radius: 20px; margin-bottom: 10px;
+    }
+
+    /* 方案说明卡 */
+    .desc-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 14px; }
+    .desc-row { display: flex; gap: 8px; font-size: 11px; color: #9ca3af; margin-bottom: 6px; }
+    .desc-row:last-child { margin-bottom: 0; }
+    .desc-row i { width: 14px; flex-shrink: 0; margin-top: 1px; }
+
+    @keyframes tagIn {
+      0% { opacity: 0; transform: translateY(6px) scale(0.9); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes slideUp {
+      0% { opacity: 0; transform: translateY(12px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes bubblePop {
+      0% { opacity: 0; transform: scale(0.8) translateY(4px); }
+      60% { transform: scale(1.05) translateY(-2px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+    @keyframes commentIn {
+      0% { opacity: 0; transform: translateX(-10px); }
+      100% { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes glow { 0%,100%{opacity:0.4} 50%{opacity:0.9} }
+
+    .tag-anim { animation: tagIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both; }
+    .panel-anim { animation: slideUp 0.35s cubic-bezier(0.32,0.72,0,1) both; }
+    .bubble-anim { animation: bubblePop 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
+    .float-anim { animation: float 3s ease-in-out infinite; }
+    .glow-anim { animation: glow 2.5s ease-in-out infinite; }
+
+    /* 方案B — 聚焦后展开面板 */
+    #panelB { transition: all 0.3s cubic-bezier(0.32,0.72,0,1); max-height: 0; overflow: hidden; opacity: 0; }
+    #panelB.open { max-height: 60px; opacity: 1; }
+
+    /* 方案C — 气泡浮标 */
+    .bubble-tag {
+      position: absolute; white-space: nowrap;
+      background: rgba(18,18,28,0.85); backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 16px; padding: 5px 10px;
+      font-size: 10px; font-weight: 500; color: white;
+      cursor: pointer; transition: transform 0.15s;
+    }
+    .bubble-tag:active { transform: scale(0.92) !important; }
+    .bubble-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+
+    /* 选中高亮 */
+    .word-tag.picked { opacity: 0.45; pointer-events: none; }
+
+    /* 页面标题区 */
+    .page-header {
+      background: rgba(13,13,18,0.95); backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      padding: 16px 24px; position: sticky; top: 0; z-index: 50;
+    }
+
+    /* 对比维度表格 */
+    .compare-table th { font-size: 11px; color: #6b7280; font-weight: 500; padding: 8px 12px; text-align: left; }
+    .compare-table td { font-size: 11px; color: #d1d5db; padding: 8px 12px; border-top: 1px solid rgba(255,255,255,0.05); }
+    .compare-table tr td:first-child { color: #9ca3af; }
+    .dot-green { color: #4ade80; }
+    .dot-yellow { color: #facc15; }
+    .dot-red { color: #f87171; }
+  </style>
+</head>
+<body>
+
+<!-- 顶部导航 -->
+<div class="page-header flex items-center justify-between">
+  <div>
+    <div class="text-base font-semibold">评论输入面板 · 词条方案对比</div>
+    <div class="text-xs text-gray-400 mt-0.5">三种交互形态，点击词条可体验实际效果</div>
+  </div>
+  <a href="index.html" class="text-xs text-gray-400 flex items-center gap-1.5 hover:text-white transition-colors">
+    <i class="fas fa-arrow-left text-xs"></i> 返回总览
+  </a>
+</div>
+
+<!-- 三栏对比区 -->
+<div class="flex gap-8 px-8 py-8 overflow-x-auto" style="min-width: 900px;">
+
+  <!-- ===== 方案 A ===== -->
+  <div class="flex flex-col items-center flex-1 min-w-64">
+    <div class="plan-label" style="background: rgba(249,115,22,0.15); border: 1px solid rgba(249,115,22,0.3); color: #fb923c;">
+      <span style="font-size:15px;">A</span> 输入框上方固定词条行
+    </div>
+
+    <div class="iphone-shell mb-5">
+      <div class="iphone-screen">
+        <div class="dynamic-island"></div>
+        <!-- 直播背景 -->
+        <div class="live-bg">
+          <img src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=600&q=80" alt="">
+          <div class="grad-bottom" style="position:absolute;inset-x:0;bottom:0;height:70%;background:linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 55%, transparent 100%);"></div>
+          <div class="grad-top" style="position:absolute;inset-x:0;top:0;height:80px;background:linear-gradient(to bottom, rgba(0,0,0,0.65), transparent);"></div>
+        </div>
+
+        <!-- 主播栏 -->
+        <div class="host-bar">
+          <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=60&q=80" class="host-avatar">
+          <span class="text-white text-xs font-medium" style="font-size:10px;">林小晴</span>
+          <span class="live-tag">直播</span>
+          <button class="follow-btn">关注</button>
+        </div>
+
+        <!-- 弹幕区 -->
+        <div style="position:absolute;bottom:110px;left:8px;right:50px;display:flex;flex-direction:column;gap:5px;">
+          <div class="comment-item tag-anim" style="animation-delay:0.2s;opacity:0">
+            <div class="comment-bubble"><span class="comment-name">买买买0917 </span><span class="comment-text">求链接！！</span></div>
+          </div>
+          <div class="comment-item tag-anim" style="animation-delay:0.8s;opacity:0">
+            <div class="comment-bubble"><span class="comment-name">时尚达人cc </span><span class="comment-text">主播今天好美😍</span></div>
+          </div>
+          <div class="comment-item tag-anim" style="animation-delay:1.4s;opacity:0">
+            <div class="comment-bubble"><span class="comment-name">🌸YOYO </span><span class="comment-text">哈哈哈太搞笑了</span></div>
+          </div>
+        </div>
+
+        <!-- 右浮动 -->
+        <div class="float-btns">
+          <div class="float-btn"><i class="fas fa-heart text-rose-400" style="font-size:12px;"></i></div>
+          <div class="float-btn"><i class="fas fa-share text-white" style="font-size:11px;"></i></div>
+          <div class="float-btn"><i class="fas fa-shopping-bag text-yellow-400" style="font-size:11px;"></i></div>
+        </div>
+
+        <!-- ===== 方案A 底部区域 ===== -->
+        <div class="bottom-zone">
+          <!-- 词条行（固定在输入框上方，始终可见） -->
+          <div style="margin-bottom:6px;">
+            <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;">
+              <i class="fas fa-magic" style="color:#a78bfa;font-size:8px;"></i>
+              <span style="font-size:9px;color:rgba(255,255,255,0.45);">快速发言</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div id="tagsA" style="display:flex;gap:6px;overflow-x:auto;flex:1;" class="no-scroll">
+                <button class="word-tag tag-a tag-anim" style="animation-delay:0.1s;opacity:0" onclick="pickTagA(this,'哈哈哈 😂')">哈哈哈 😂 <span style="color:#fb923c;font-size:8px;margin-left:2px;">🔥2.1k</span></button>
+                <button class="word-tag tag-b tag-anim" style="animation-delay:0.18s;opacity:0" onclick="pickTagA(this,'求链接！🔗')">求链接！🔗</button>
+                <button class="word-tag tag-c tag-anim" style="animation-delay:0.26s;opacity:0" onclick="pickTagA(this,'主播加油💪')">主播加油💪</button>
+                <button class="word-tag tag-d tag-anim" style="animation-delay:0.34s;opacity:0" onclick="pickTagA(this,'已下单🛍️')">已下单🛍️</button>
+              </div>
+              <button onclick="refreshA()" style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;flex-shrink:0;">
+                <i class="fas fa-sync-alt" style="color:rgba(255,255,255,0.5);font-size:8px;" id="refreshIconA"></i>
+              </button>
+            </div>
+          </div>
+          <!-- 输入行 -->
+          <div class="input-row">
+            <div class="input-pill">
+              <input id="inputA" type="text" placeholder="说点什么...">
+              <i class="fas fa-paper-plane" style="color:rgba(255,255,255,0.3);font-size:10px;"></i>
+            </div>
+            <div class="gift-btn"><i class="fas fa-gift" style="color:white;font-size:11px;"></i></div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /iphone-shell A -->
+
+    <!-- 说明卡 A -->
+    <div class="desc-card w-full" style="max-width:280px;">
+      <div style="font-size:12px;font-weight:600;color:white;margin-bottom:8px;">输入框上方固定词条行</div>
+      <div class="desc-row"><i class="fas fa-check-circle dot-green"></i><span>始终可见，无需触发，发现成本最低</span></div>
+      <div class="desc-row"><i class="fas fa-check-circle dot-green"></i><span>与输入框视觉整体感强，体验连贯</span></div>
+      <div class="desc-row"><i class="fas fa-check-circle dot-green"></i><span>适合新用户引导，转化率高</span></div>
+      <div class="desc-row"><i class="fas fa-exclamation-circle dot-yellow"></i><span>固定占用底部约 40px 空间</span></div>
+      <div class="desc-row"><i class="fas fa-exclamation-circle dot-yellow"></i><span>词条较多时需横向滚动</span></div>
+    </div>
+  </div><!-- /方案A -->
+
+
+  <!-- ===== 方案 B ===== -->
+  <div class="flex flex-col items-center flex-1 min-w-64">
+    <div class="plan-label" style="background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.3); color: #a78bfa;">
+      <span style="font-size:15px;">B</span> 聚焦输入框后弹出词条
+    </div>
+
+    <div class="iphone-shell mb-5">
+      <div class="iphone-screen">
+        <div class="dynamic-island"></div>
+        <div class="live-bg">
+          <img src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=600&q=80" alt="">
+          <div style="position:absolute;inset-x:0;bottom:0;height:70%;background:linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 55%, transparent 100%);"></div>
+          <div style="position:absolute;inset-x:0;top:0;height:80px;background:linear-gradient(to bottom, rgba(0,0,0,0.65), transparent);"></div>
+        </div>
+
+        <div class="host-bar">
+          <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=60&q=80" class="host-avatar">
+          <span class="text-white text-xs font-medium" style="font-size:10px;">林小晴</span>
+          <span class="live-tag">直播</span>
+          <button class="follow-btn">关注</button>
+        </div>
+
+        <div style="position:absolute;bottom:110px;left:8px;right:50px;display:flex;flex-direction:column;gap:5px;">
+          <div class="comment-item tag-anim" style="animation-delay:0.3s;opacity:0">
+            <div class="comment-bubble"><span class="comment-name">爱购物的我 </span><span class="comment-text">已经下单了！</span></div>
+          </div>
+          <div class="comment-item tag-anim" style="animation-delay:1s;opacity:0">
+            <div class="comment-bubble"><span class="comment-name">直播粉丝团 </span><span class="comment-text">主播加油！！</span></div>
+          </div>
+          <div class="comment-item tag-anim" style="animation-delay:1.8s;opacity:0">
+            <div class="comment-bubble"><span class="comment-name">观众小林 </span><span class="comment-text">这期太好看了</span></div>
+          </div>
+        </div>
+
+        <div class="float-btns">
+          <div class="float-btn"><i class="fas fa-heart text-rose-400" style="font-size:12px;"></i></div>
+          <div class="float-btn"><i class="fas fa-share text-white" style="font-size:11px;"></i></div>
+          <div class="float-btn"><i class="fas fa-shopping-bag text-yellow-400" style="font-size:11px;"></i></div>
+        </div>
+
+        <!-- ===== 方案B 底部 ===== -->
+        <div class="bottom-zone">
+          <!-- 词条面板：默认隐藏，聚焦后展开 -->
+          <div id="panelB" style="margin-bottom:0; overflow:hidden; max-height:0; opacity:0; transition: all 0.3s cubic-bezier(0.32,0.72,0,1);">
+            <div style="padding-bottom:6px;">
+              <div style="display:flex;align-items:center;gap:4px;margin-bottom:5px;">
+                <i class="fas fa-bolt" style="color:#f59e0b;font-size:8px;"></i>
+                <span style="font-size:9px;color:rgba(255,255,255,0.5);">快捷发言</span>
+                <span style="font-size:8px;color:rgba(255,255,255,0.25);margin-left:auto;">点击词条直接发送</span>
+              </div>
+              <div style="display:flex;gap:6px;overflow-x:auto;" class="no-scroll">
+                <button class="word-tag tag-a" onclick="pickTagB(this,'哈哈哈 😂')">哈哈哈 😂</button>
+                <button class="word-tag tag-b" onclick="pickTagB(this,'求链接！🔗')">求链接！🔗 <span style="color:#fb923c;font-size:8px;">🔥</span></button>
+                <button class="word-tag tag-c" onclick="pickTagB(this,'主播加油💪')">主播加油💪</button>
+                <button class="word-tag tag-a" onclick="pickTagB(this,'太棒了！')">太棒了！</button>
+                <button class="word-tag tag-d" onclick="pickTagB(this,'已送礼❤️')">已送礼❤️</button>
+              </div>
+            </div>
+          </div>
+          <!-- 输入行 -->
+          <div class="input-row">
+            <div class="input-pill" id="inputPillB" onclick="focusB()" style="cursor:pointer;">
+              <input id="inputB" type="text" placeholder="点击输入，词条自动出现..." readonly style="cursor:pointer;">
+              <i class="fas fa-paper-plane" style="color:rgba(255,255,255,0.3);font-size:10px;"></i>
+            </div>
+            <div class="gift-btn"><i class="fas fa-gift" style="color:white;font-size:11px;"></i></div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /iphone B -->
+
+    <div class="desc-card w-full" style="max-width:280px;">
+      <div style="font-size:12px;font-weight:600;color:white;margin-bottom:8px;">聚焦输入框后弹出词条</div>
+      <div class="desc-row"><i class="fas fa-check-circle dot-green"></i><span>非占用空间，直播画面更沉浸</span></div>
+      <div class="desc-row"><i class="fas fa-check-circle dot-green"></i><span>用户有输入意图时再展示，高相关性</span></div>
+      <div class="desc-row"><i class="fas fa-check-circle dot-green"></i><span>可展示更多词条，不受横向空间限制</span></div>
+      <div class="desc-row"><i class="fas fa-exclamation-circle dot-yellow"></i><span>需要用户主动触发，潜水用户容易错过</span></div>
+      <div class="desc-row"><i class="fas fa-exclamation-circle dot-yellow"></i><span>需额外实现键盘弹起高度适配</span></div>
+    </div>
+  </div><!-- /方案B -->
+
+
+  <!-- ===== 方案 C ===== -->
+  <div class="flex flex-col items-center flex-1 min-w-64">
+    <div class="plan-label" style="background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: #4ade80;">
+      <span style="font-size:15px;">C</span> 浮动气泡词条
+    </div>
+
+    <div class="iphone-shell mb-5">
+      <div class="iphone-screen">
+        <div class="dynamic-island"></div>
+        <div class="live-bg">
+          <img src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=600&q=80" alt="">
+          <div style="position:absolute;inset-x:0;bottom:0;height:70%;background:linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 55%, transparent 100%);"></div>
+          <div style="position:absolute;inset-x:0;top:0;height:80px;background:linear-gradient(to bottom, rgba(0,0,0,0.65), transparent);"></div>
+        </div>
+
+        <div class="host-bar">
+          <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=60&q=80" class="host-avatar">
+          <span class="text-white text-xs font-medium" style="font-size:10px;">林小晴</span>
+          <span class="live-tag">直播</span>
+          <button class="follow-btn">关注</button>
+        </div>
+
+        <div style="position:absolute;bottom:110px;left:8px;right:50px;display:flex;flex-direction:column;gap:5px;">
+          <div class="comment-item tag-anim" style="animation-delay:0.5s;opacity:0">
+            <div class="comment-bubble"><span class="comment-name">网红模仿秀 </span><span class="comment-text">主播颜值绝了！</span></div>
+          </div>
+          <div class="comment-item tag-anim" style="animation-delay:1.2s;opacity:0">
+            <div class="comment-bubble"><span class="comment-name">🌟时尚控 </span><span class="comment-text">在哪买啊？？</span></div>
+          </div>
+          <div class="comment-item tag-anim" style="animation-delay:2s;opacity:0">
+            <div class="comment-bubble"><span class="comment-name">观众小李 </span><span class="comment-text">超级好看！</span></div>
+          </div>
+        </div>
+
+        <div class="float-btns">
+          <div class="float-btn"><i class="fas fa-heart text-rose-400" style="font-size:12px;"></i></div>
+          <div class="float-btn"><i class="fas fa-share text-white" style="font-size:11px;"></i></div>
+          <div class="float-btn"><i class="fas fa-shopping-bag text-yellow-400" style="font-size:11px;"></i></div>
+        </div>
+
+        <!-- ===== 方案C — 浮动气泡词条 ===== -->
+        <!-- 气泡1：输入框左上方，紧贴输入框 -->
+        <div id="bubbleC1" class="bubble-tag bubble-anim float-anim"
+          style="bottom:80px; left:10px; animation-delay:0.3s; animation-fill-mode:both;"
+          onclick="pickTagC(this,'哈哈哈 😂')">
+          <span class="bubble-dot" style="background:#fb7185;"></span>哈哈哈 😂
+          <span style="font-size:8px;color:#fb923c;margin-left:2px;">🔥</span>
+        </div>
+        <div id="bubbleC2" class="bubble-tag bubble-anim float-anim"
+          style="bottom:80px; left:108px; animation-delay:0.5s; animation-fill-mode:both; animation: bubblePop 0.4s 0.5s cubic-bezier(0.34,1.56,0.64,1) both, float 3.5s 1s ease-in-out infinite;"
+          onclick="pickTagC(this,'求链接！🔗')">
+          <span class="bubble-dot" style="background:#818cf8;"></span>求链接！🔗
+        </div>
+        <div id="bubbleC3" class="bubble-tag bubble-anim"
+          style="bottom:112px; left:60px; animation-delay:0.7s; animation-fill-mode:both; animation: bubblePop 0.4s 0.7s cubic-bezier(0.34,1.56,0.64,1) both, float 4s 1.2s ease-in-out infinite;"
+          onclick="pickTagC(this,'主播好美！')">
+          <span class="bubble-dot" style="background:#4ade80;"></span>主播好美！
+        </div>
+
+        <!-- 底部输入行（方案C不变，词条在气泡里） -->
+        <div class="bottom-zone">
+          <div class="input-row">
+            <div class="input-pill">
+              <input id="inputC" type="text" placeholder="说点什么...">
+              <i class="fas fa-paper-plane" style="color:rgba(255,255,255,0.3);font-size:10px;"></i>
+            </div>
+            <div class="gift-btn"><i class="fas fa-gift" style="color:white;font-size:11px;"></i></div>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /iphone C -->
+
+    <div class="desc-card w-full" style="max-width:280px;">
+      <div style="font-size:12px;font-weight:600;color:white;margin-bottom:8px;">浮动气泡词条</div>
+      <div class="desc-row"><i class="fas fa-check-circle dot-green"></i><span>视觉最轻量，不占底部固定空间</span></div>
+      <div class="desc-row"><i class="fas fa-check-circle dot-green"></i><span>气泡浮动动效吸睛，引导性强</span></div>
+      <div class="desc-row"><i class="fas fa-check-circle dot-green"></i><span>可出现在画面任意位置，灵活度高</span></div>
+      <div class="desc-row"><i class="fas fa-exclamation-circle dot-yellow"></i><span>只适合 2-3 个词条，不支持多词条</span></div>
+      <div class="desc-row"><i class="fas fa-times-circle dot-red"></i><span>气泡可能遮挡弹幕内容</span></div>
+      <div class="desc-row"><i class="fas fa-times-circle dot-red"></i><span>定位布局复杂，多词条时易混乱</span></div>
+    </div>
+  </div><!-- /方案C -->
+
+</div><!-- /三栏 -->
+
+
+<!-- 综合对比表 -->
+<div class="px-8 pb-10">
+  <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;">综合对比</div>
+  <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:16px;overflow:hidden;">
+    <table class="compare-table w-full">
+      <thead>
+        <tr style="border-bottom:1px solid rgba(255,255,255,0.07);">
+          <th style="width:160px;">维度</th>
+          <th><span style="color:#fb923c;">方案 A</span> 固定词条行</th>
+          <th><span style="color:#a78bfa;">方案 B</span> 聚焦弹出</th>
+          <th><span style="color:#4ade80;">方案 C</span> 浮动气泡</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>词条可见性</td>
+          <td><span class="dot-green">●</span> 始终可见</td>
+          <td><span class="dot-yellow">●</span> 需触发</td>
+          <td><span class="dot-yellow">●</span> 气泡浮现</td>
+        </tr>
+        <tr>
+          <td>空间占用</td>
+          <td><span class="dot-yellow">●</span> 固定 ~40px</td>
+          <td><span class="dot-green">●</span> 按需展开</td>
+          <td><span class="dot-green">●</span> 悬浮不占位</td>
+        </tr>
+        <tr>
+          <td>词条数量</td>
+          <td><span class="dot-green">●</span> 4-6 个（可滚动）</td>
+          <td><span class="dot-green">●</span> 5-8 个</td>
+          <td><span class="dot-red">●</span> 2-3 个</td>
+        </tr>
+        <tr>
+          <td>新用户引导</td>
+          <td><span class="dot-green">●</span> 优秀</td>
+          <td><span class="dot-yellow">●</span> 一般</td>
+          <td><span class="dot-green">●</span> 良好</td>
+        </tr>
+        <tr>
+          <td>沉浸感</td>
+          <td><span class="dot-yellow">●</span> 轻微影响</td>
+          <td><span class="dot-green">●</span> 不影响</td>
+          <td><span class="dot-yellow">●</span> 气泡遮弹幕</td>
+        </tr>
+        <tr>
+          <td>开发复杂度</td>
+          <td><span class="dot-green">●</span> 低</td>
+          <td><span class="dot-yellow">●</span> 中（键盘适配）</td>
+          <td><span class="dot-yellow">●</span> 中（定位逻辑）</td>
+        </tr>
+        <tr>
+          <td>推荐场景</td>
+          <td>通用场景、主推</td>
+          <td>沉浸式直播</td>
+          <td>活动期间快速引导</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="margin-top:12px;padding:12px 16px;background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);border-radius:12px;font-size:11px;color:#fdba74;">
+    <i class="fas fa-lightbulb" style="margin-right:6px;"></i>
+    <strong>推荐组合：</strong>方案 A（默认态）+ 方案 B（输入时升级）— 未聚焦时固定展示词条行，点击输入框后展开更多词条并上移，兼顾引导性与沉浸感。
+  </div>
+</div>
+
+<script>
+  // 方案A — 点击词条
+  function pickTagA(el, text) {
+    el.classList.add('picked');
+    document.getElementById('inputA').value = text;
+    setTimeout(() => {
+      document.getElementById('inputA').value = '';
+      el.classList.remove('picked');
+    }, 1000);
+  }
+  // 方案A — 换一换
+  const tagSetsA = [
+    ['哈哈哈 😂', '求链接！🔗', '主播加油💪', '已下单🛍️'],
+    ['好好看！', '这是什么牌子？', '太棒了！', '支持主播❤️'],
+    ['主播讲得好！', '多少钱？', '加油！', '已送礼🎁'],
+  ];
+  const tagTypesA = ['tag-a','tag-b','tag-c','tag-d'];
+  let tagSetIdxA = 0;
+  function refreshA() {
+    tagSetIdxA = (tagSetIdxA + 1) % tagSetsA.length;
+    const area = document.getElementById('tagsA');
+    area.innerHTML = '';
+    tagSetsA[tagSetIdxA].forEach((text, i) => {
+      const btn = document.createElement('button');
+      btn.className = `word-tag ${tagTypesA[i%4]} tag-anim`;
+      btn.style.animationDelay = `${i*0.07}s`;
+      btn.style.opacity = '0';
+      btn.textContent = text;
+      btn.onclick = () => pickTagA(btn, text);
+      area.appendChild(btn);
+    });
+    const icon = document.getElementById('refreshIconA');
+    icon.style.transition = 'transform 0.4s';
+    icon.style.transform = 'rotate(360deg)';
+    setTimeout(() => { icon.style.transition=''; icon.style.transform=''; }, 400);
+  }
+
+  // 方案B — 聚焦展开
+  let bOpen = false;
+  function focusB() {
+    if (bOpen) return;
+    bOpen = true;
+    const panel = document.getElementById('panelB');
+    panel.style.maxHeight = '56px';
+    panel.style.opacity = '1';
+    panel.style.marginBottom = '6px';
+    const input = document.getElementById('inputB');
+    input.removeAttribute('readonly');
+    input.style.cursor = 'text';
+    input.placeholder = '说点什么...';
+    input.focus();
+    // 点击其他地方收起
+    setTimeout(() => {
+      document.addEventListener('click', closeBPanel, { once: true });
+    }, 100);
+  }
+  function closeBPanel(e) {
+    const pill = document.getElementById('inputPillB');
+    if (pill && pill.contains(e.target)) return;
+    bOpen = false;
+    const panel = document.getElementById('panelB');
+    panel.style.maxHeight = '0';
+    panel.style.opacity = '0';
+    panel.style.marginBottom = '0';
+  }
+  function pickTagB(el, text) {
+    el.classList.add('picked');
+    document.getElementById('inputB').value = text;
+    setTimeout(() => {
+      document.getElementById('inputB').value = '';
+      el.classList.remove('picked');
+    }, 1000);
+  }
+
+  // 方案C — 气泡点击
+  function pickTagC(el, text) {
+    el.style.transition = 'all 0.2s';
+    el.style.transform = 'scale(0.85)';
+    el.style.opacity = '0.4';
+    document.getElementById('inputC').value = text;
+    setTimeout(() => {
+      el.style.transform = '';
+      el.style.opacity = '1';
+      document.getElementById('inputC').value = '';
+    }, 900);
+  }
+
+  // 气泡C轮播（每4秒换一个词）
+  const bubblesData = [
+    ['哈哈哈 😂','求链接！🔗','主播好美！'],
+    ['好好看！','多少钱？','加油！💪'],
+    ['已下单🛍️','想要链接','主播yyds！'],
+  ];
+  let bubbleIdx = 0;
+  setInterval(() => {
+    bubbleIdx = (bubbleIdx + 1) % bubblesData.length;
+    const set = bubblesData[bubbleIdx];
+    ['bubbleC1','bubbleC2','bubbleC3'].forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.style.transition = 'opacity 0.3s';
+      el.style.opacity = '0';
+      setTimeout(() => {
+        el.innerHTML = `<span class="bubble-dot" style="background:${['#fb7185','#818cf8','#4ade80'][i]};"></span>${set[i]}`;
+        el.onclick = () => pickTagC(el, set[i]);
+        el.style.opacity = '1';
+      }, 350);
+    });
+  }, 4000);
+</script>
+</body>
+</html>

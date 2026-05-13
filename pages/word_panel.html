@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>词条面板 - 展开态</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif; }
+    .glass { background: rgba(255,255,255,0.07); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
+    .glass-card { background: rgba(255,255,255,0.05); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+
+    @keyframes panelSlideUp {
+      0% { transform: translateY(100%); opacity: 0; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+    @keyframes tagIn {
+      0% { opacity: 0; transform: translateY(12px) scale(0.9); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes selectPulse {
+      0% { box-shadow: 0 0 0 0 rgba(249,115,22,0.6); }
+      100% { box-shadow: 0 0 0 12px rgba(249,115,22,0); }
+    }
+
+    .panel-enter { animation: panelSlideUp 0.4s cubic-bezier(0.32,0.72,0,1) forwards; }
+    .tag-enter { animation: tagIn 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards; opacity: 0; }
+
+    .word-tag {
+      cursor: pointer;
+      transition: transform 0.15s, opacity 0.15s;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    .word-tag:active { transform: scale(0.93); }
+    .word-tag.selected {
+      border-color: rgba(249,115,22,0.8) !important;
+      animation: selectPulse 0.5s ease-out;
+    }
+
+    .tag-interactive { background: linear-gradient(135deg, rgba(251,113,133,0.2), rgba(251,146,60,0.15)); }
+    .tag-question { background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(59,130,246,0.15)); }
+    .tag-cheer { background: linear-gradient(135deg, rgba(34,197,94,0.18), rgba(234,179,8,0.15)); }
+    .tag-gift { background: linear-gradient(135deg, rgba(234,179,8,0.2), rgba(251,113,133,0.15)); }
+    .tag-custom { background: linear-gradient(135deg, rgba(236,72,153,0.2), rgba(168,85,247,0.15)); border-color: rgba(236,72,153,0.3) !important; }
+
+    .cat-btn { transition: all 0.2s; border: 1px solid rgba(255,255,255,0.12); }
+    .cat-btn.active { border-color: rgba(249,115,22,0.6); background: rgba(249,115,22,0.15); }
+
+    .send-btn {
+      background: linear-gradient(135deg, #f97316, #ef4444);
+      transition: transform 0.15s, box-shadow 0.2s;
+    }
+    .send-btn:active { transform: scale(0.95); }
+    .send-btn:not(.disabled):hover { box-shadow: 0 4px 20px rgba(249,115,22,0.5); }
+    .send-btn.disabled { opacity: 0.4; }
+  </style>
+</head>
+<body class="bg-black" style="min-height:100vh;">
+  <!-- 半透明背景遮罩 -->
+  <div class="fixed inset-0 z-0" style="background: rgba(0,0,0,0.6);"></div>
+
+  <!-- 底部上拉面板 -->
+  <div class="fixed inset-x-0 bottom-0 z-10 panel-enter" style="border-radius: 24px 24px 0 0; background: rgba(18,18,22,0.95); backdrop-filter: blur(30px);">
+
+    <!-- 拖拽条 -->
+    <div class="flex justify-center pt-3 pb-2">
+      <div class="w-10 h-1 rounded-full bg-gray-600"></div>
+    </div>
+
+    <!-- 标题行 -->
+    <div class="px-5 pb-3 flex items-center justify-between">
+      <div>
+        <h2 class="text-white font-semibold text-base">推荐发言词条</h2>
+        <p class="text-gray-400 text-xs mt-0.5">点击词条一键发言，活跃直播间氛围</p>
+      </div>
+      <button onclick="window.history.back()" class="w-8 h-8 rounded-full glass flex items-center justify-center">
+        <i class="fas fa-times text-gray-400 text-sm"></i>
+      </button>
+    </div>
+
+    <!-- 分类 Tab -->
+    <div class="px-4 mb-3">
+      <div class="flex gap-2 overflow-x-auto" style="-ms-overflow-style:none;scrollbar-width:none;">
+        <button class="cat-btn active text-white text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap glass" onclick="filterTags(this, 'all')">
+          全部
+        </button>
+        <button class="cat-btn text-gray-400 text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap glass" onclick="filterTags(this, 'interactive')">
+          😄 互动类
+        </button>
+        <button class="cat-btn text-gray-400 text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap glass" onclick="filterTags(this, 'question')">
+          🔍 提问类
+        </button>
+        <button class="cat-btn text-gray-400 text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap glass" onclick="filterTags(this, 'cheer')">
+          💪 鼓励类
+        </button>
+        <button class="cat-btn text-gray-400 text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap glass" onclick="filterTags(this, 'gift')">
+          🎁 打赏类
+        </button>
+      </div>
+    </div>
+
+    <!-- 主播专属词条区域 -->
+    <div class="mx-4 mb-3 rounded-2xl p-3" style="background: linear-gradient(135deg, rgba(236,72,153,0.15), rgba(168,85,247,0.1)); border: 1px solid rgba(236,72,153,0.25);">
+      <div class="flex items-center gap-2 mb-2">
+        <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=40&q=80"
+          class="w-5 h-5 rounded-full object-cover border border-pink-400">
+        <span class="text-pink-300 text-xs font-medium">主播专属推荐</span>
+        <span class="text-[10px] text-pink-400 glass px-1.5 py-0.5 rounded-full">限时</span>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button class="word-tag tag-custom text-white text-xs font-medium rounded-full px-3 py-1.5 tag-enter" style="animation-delay:0s"
+          onclick="selectTag(this, '我要参与抽奖！🎉')">
+          我要参与抽奖！🎉
+        </button>
+        <button class="word-tag tag-custom text-white text-xs font-medium rounded-full px-3 py-1.5 tag-enter" style="animation-delay:0.05s"
+          onclick="selectTag(this, '主播送我！🙏')">
+          主播送我！🙏
+        </button>
+        <button class="word-tag tag-custom text-white text-xs font-medium rounded-full px-3 py-1.5 tag-enter" style="animation-delay:0.1s"
+          onclick="selectTag(this, '已转发分享✅')">
+          已转发分享✅
+        </button>
+      </div>
+    </div>
+
+    <!-- 词条网格 -->
+    <div id="tagGrid" class="px-4 pb-2 flex flex-wrap gap-2" style="max-height: 180px; overflow-y: auto;">
+      <!-- 动态渲染 -->
+    </div>
+
+    <!-- 选中词条预览 + 发送 -->
+    <div class="px-4 pt-3 pb-4" style="border-top: 1px solid rgba(255,255,255,0.06);">
+      <div class="flex items-center gap-3">
+        <div class="flex-1 rounded-2xl px-4 py-2.5 flex items-center gap-2" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);">
+          <i class="fas fa-comment text-gray-500 text-sm"></i>
+          <span id="selectedPreview" class="text-gray-400 text-sm">选择或输入发言内容...</span>
+        </div>
+        <button id="sendBtn" class="send-btn disabled text-white font-semibold text-sm px-5 py-2.5 rounded-2xl" onclick="sendSelected()">
+          发送
+        </button>
+      </div>
+      <p class="text-center text-gray-600 text-xs mt-2">或 <span class="text-gray-400 underline">手动输入内容</span></p>
+    </div>
+
+    <!-- 底部安全区 -->
+    <div style="height: env(safe-area-inset-bottom, 0px);"></div>
+  </div>
+
+  <script>
+    const allTags = [
+      { text: "哈哈哈太搞笑了 😂", type: "interactive", hot: true, hotNum: "3.1k" },
+      { text: "主播好美！", type: "interactive", hot: false },
+      { text: "这期内容太棒了", type: "interactive", hot: false },
+      { text: "我每次都来看！", type: "interactive", hot: false },
+      { text: "求链接！🔗", type: "question", hot: true, hotNum: "2.8k" },
+      { text: "这是什么牌子？", type: "question", hot: false },
+      { text: "多少钱？", type: "question", hot: true, hotNum: "1.5k" },
+      { text: "有没有优惠码？", type: "question", hot: false },
+      { text: "主播加油！💪", type: "cheer", hot: false },
+      { text: "太厉害了！继续！", type: "cheer", hot: false },
+      { text: "支持你！一直在看", type: "cheer", hot: false },
+      { text: "已下单！超开心 🛍️", type: "gift", hot: false },
+      { text: "已送礼物支持！❤️", type: "gift", hot: true, hotNum: "987" },
+    ];
+
+    const tagTypeClass = {
+      interactive: "tag-interactive",
+      question: "tag-question",
+      cheer: "tag-cheer",
+      gift: "tag-gift",
+    };
+
+    let selectedText = '';
+    let currentFilter = 'all';
+
+    function renderTags(filter = 'all') {
+      const grid = document.getElementById('tagGrid');
+      grid.innerHTML = '';
+      const filtered = filter === 'all' ? allTags : allTags.filter(t => t.type === filter);
+      filtered.forEach((tag, i) => {
+        const el = document.createElement('button');
+        el.className = `word-tag ${tagTypeClass[tag.type]} text-white text-xs font-medium rounded-full px-3 py-1.5 tag-enter flex items-center gap-1`;
+        el.style.animationDelay = `${i * 0.04}s`;
+        el.innerHTML = `
+          ${tag.hot ? `<span class="text-orange-400">🔥</span>` : ''}
+          <span>${tag.text}</span>
+          ${tag.hot ? `<span class="text-orange-300 text-[10px] ml-0.5">${tag.hotNum}</span>` : ''}
+        `;
+        el.onclick = () => selectTag(el, tag.text);
+        grid.appendChild(el);
+      });
+    }
+
+    function filterTags(btn, type) {
+      document.querySelectorAll('.cat-btn').forEach(b => {
+        b.classList.remove('active');
+        b.classList.add('text-gray-400');
+        b.classList.remove('text-white');
+      });
+      btn.classList.add('active', 'text-white');
+      btn.classList.remove('text-gray-400');
+      currentFilter = type;
+      renderTags(type);
+    }
+
+    function selectTag(el, text) {
+      // 取消之前选中
+      document.querySelectorAll('.word-tag.selected').forEach(t => t.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedText = text;
+      document.getElementById('selectedPreview').textContent = text;
+      document.getElementById('selectedPreview').classList.remove('text-gray-400');
+      document.getElementById('selectedPreview').classList.add('text-white');
+      const btn = document.getElementById('sendBtn');
+      btn.classList.remove('disabled');
+    }
+
+    function sendSelected() {
+      if (!selectedText) return;
+      // 发送动效
+      const btn = document.getElementById('sendBtn');
+      btn.textContent = '已发送 ✓';
+      btn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+      setTimeout(() => {
+        btn.textContent = '发送';
+        btn.style.background = '';
+        btn.classList.add('disabled');
+        selectedText = '';
+        document.getElementById('selectedPreview').textContent = '选择或输入发言内容...';
+        document.getElementById('selectedPreview').classList.add('text-gray-400');
+        document.getElementById('selectedPreview').classList.remove('text-white');
+        document.querySelectorAll('.word-tag.selected').forEach(t => t.classList.remove('selected'));
+      }, 1200);
+    }
+
+    renderTags();
+  </script>
+</body>
+</html>
